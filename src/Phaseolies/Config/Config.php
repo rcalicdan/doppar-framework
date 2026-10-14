@@ -15,22 +15,16 @@ final class Config
 
     /**
      * Path to the configuration cache file.
-     *
-     * @var string|null
      */
     protected static ?string $cacheFile = null;
 
     /**
      * Flag indicating if the configuration was loaded from cache.
-     *
-     * @var bool
      */
     protected static bool $loadedFromCache = false;
 
     /**
      * Tracks whether config was modified after loading from cache.
-     *
-     * @var bool
      */
     protected static bool $configModified = false;
 
@@ -57,8 +51,6 @@ final class Config
 
     /**
      * Initialize the configuration system.
-     *
-     * @return void
      */
     public static function initialize(): void
     {
@@ -71,8 +63,6 @@ final class Config
 
     /**
      * Undo any runtime mutation made by `set()` since boot.
-     *
-     * @return void
      */
     public static function resetRuntimeOverrides(): void
     {
@@ -91,8 +81,6 @@ final class Config
 
     /**
      * Generate a unique cache key based on all configuration files and .env.
-     *
-     * @return string
      */
     protected static function getCacheKey(): string
     {
@@ -118,8 +106,6 @@ final class Config
 
     /**
      * Load all configuration files from the source directory.
-     *
-     * @return void
      */
     public static function loadAll(): void
     {
@@ -135,8 +121,6 @@ final class Config
 
     /**
      * Load configuration from the cache if valid; otherwise, reload from source.
-     *
-     * @return void
      */
     public static function loadFromCache(): void
     {
@@ -167,8 +151,6 @@ final class Config
 
     /**
      * Write the current configuration to cache.
-     *
-     * @return void
      */
     public static function cacheConfig(): void
     {
@@ -216,10 +198,6 @@ final class Config
 
     /**
      * Get a configuration value using dot notation.
-     *
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
      */
     public static function get(string $key, mixed $default = null): mixed
     {
@@ -242,10 +220,6 @@ final class Config
 
     /**
      * Set a configuration value using dot notation.
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return void
      */
     public static function set(string $key, mixed $value): void
     {
@@ -286,9 +260,6 @@ final class Config
 
     /**
      * Check if a configuration key exists.
-     *
-     * @param string $key
-     * @return bool
      */
     public static function has(string $key): bool
     {
@@ -297,8 +268,6 @@ final class Config
 
     /**
      * Clear the configuration cache and reset in-memory config.
-     *
-     * @return void
      */
     public static function clearCache(): void
     {
@@ -314,8 +283,6 @@ final class Config
 
     /**
      * Check if the cached configuration is valid.
-     *
-     * @return bool
      */
     public static function isCacheValid(): bool
     {

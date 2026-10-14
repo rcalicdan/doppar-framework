@@ -18,8 +18,6 @@ trait EnforcesImmutability
 
     /**
      * Whether this instance has been frozen by the container
-     *
-     * @var bool
      */
     private bool $__frozen = false;
 
@@ -28,8 +26,6 @@ trait EnforcesImmutability
      *
      * Snapshots all public instance properties into the internal map,
      * then unsets them — forcing future access through __get/__set.
-     *
-     * @return void
      */
     public function freeze(): void
     {
@@ -54,8 +50,6 @@ trait EnforcesImmutability
 
     /**
      * Check if the instance is frozen
-     *
-     * @return bool
      */
     public function isFrozen(): bool
     {
@@ -67,7 +61,6 @@ trait EnforcesImmutability
      *
      * @throws ImmutableViolationException on write attempts after freeze()
      * @throws \RuntimeException on access to undefined properties
-     * @return mixed
      */
     public function __get(string $name): mixed
     {
@@ -84,7 +77,6 @@ trait EnforcesImmutability
      * Block all writes once frozen
      *
      * @throws ImmutableViolationException
-     * @return void
      */
     public function __set(string $name, mixed $value): void
     {
@@ -97,8 +89,6 @@ trait EnforcesImmutability
 
     /**
      * Forward isset() checks to the frozen map
-     *
-     * @return bool
      */
     public function __isset(string $name): bool
     {
@@ -109,7 +99,6 @@ trait EnforcesImmutability
      * Block unset() — it is a mutation
      *
      * @throws ImmutableViolationException
-     * @return void
      */
     public function __unset(string $name): void
     {
@@ -120,7 +109,6 @@ trait EnforcesImmutability
      * Prevent cloning of frozen services
      *
      * @throws ImmutableViolationException
-     * @return void
      */
     public function __clone(): void
     {

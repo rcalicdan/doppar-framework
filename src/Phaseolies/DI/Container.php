@@ -33,8 +33,6 @@ class Container implements ArrayAccess
 
     /**
      * The container instance.
-     *
-     * @var self|null
      */
     private static ?self $instance = null;
 
@@ -47,8 +45,6 @@ class Container implements ArrayAccess
 
     /**
      * Whether snapshotBootBindings() has run yet.
-     *
-     * @var bool
      */
     private bool $bootBindingsSnapshotted = false;
 
@@ -69,9 +65,6 @@ class Container implements ArrayAccess
 
     /**
      * Check if a binding exists at the specified offset.
-     *
-     * @param mixed $offset
-     * @return bool
      */
     public function offsetExists(mixed $offset): bool
     {
@@ -80,9 +73,6 @@ class Container implements ArrayAccess
 
     /**
      * Get the binding value at the specified offset.
-     *
-     * @param mixed $offset
-     * @return mixed
      */
     public function offsetGet(mixed $offset): mixed
     {
@@ -91,10 +81,6 @@ class Container implements ArrayAccess
 
     /**
      * Set a binding at the specified offset.
-     *
-     * @param mixed $offset
-     * @param mixed $value
-     * @return void
      */
     public function offsetSet(mixed $offset, mixed $value): void
     {
@@ -103,9 +89,6 @@ class Container implements ArrayAccess
 
     /**
      * Unset/remove a binding at the specified offset.
-     *
-     * @param mixed $offset
-     * @return void
      */
     public function offsetUnset(mixed $offset): void
     {
@@ -114,11 +97,6 @@ class Container implements ArrayAccess
 
     /**
      * Bind a service to the container.
-     *
-     * @param string $abstract
-     * @param callable|string|null $concrete
-     * @param bool $singleton
-     * @return void
      */
     public function bind(string $abstract, callable|string|null $concrete = null, bool $singleton = false): void
     {
@@ -138,10 +116,6 @@ class Container implements ArrayAccess
 
     /**
      * Bind a singleton service to the container.
-     *
-     * @param string $abstract
-     * @param callable|string|null $concrete
-     * @return void
      */
     public function singleton(string $abstract, callable|string|null $concrete = null): void
     {
@@ -150,10 +124,6 @@ class Container implements ArrayAccess
 
     /**
      * Bind an instance as a singleton.
-     *
-     * @param string $abstract
-     * @param mixed $instance
-     * @return void
      */
     public function instance(string $abstract, mixed $instance): void
     {
@@ -227,10 +197,8 @@ class Container implements ArrayAccess
     /**
      * Resolve a binding from the container.
      *
-     * @param string $abstract
      * @param array{concrete: mixed, singleton: bool} $binding
      * @param array<string, mixed> $parameters
-     * @return mixed
      */
     private function resolveBinding(string $abstract, array $binding, array $parameters): mixed
     {
@@ -248,7 +216,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Resolve a class with its dependencies (alias for get)
+     * Resolve a class with its dependencies (alias for get).
      *
      * @template T of object
      * @param class-string<T>|string $abstract
@@ -261,7 +229,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Build a concrete instance with dependency injection
+     * Build a concrete instance with dependency injection.
      *
      * @template T of object
      * @param class-string<T> $concrete
@@ -303,8 +271,6 @@ class Container implements ArrayAccess
      * Freeze the instance if the class has the #[Immutable] attribute and uses the EnforcesImmutability trait.
      *
      * @param \ReflectionClass<object> $reflector
-     * @param object $instance
-     * @return void
      */
     private function freezeIfImmutable(\ReflectionClass $reflector, object $instance): void
     {
@@ -317,11 +283,10 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Resolve constructor dependencies
+     * Resolve constructor dependencies.
      *
      * @param \ReflectionParameter[] $parameters
      * @param array<string, mixed> $primitives
-     * @param string $className
      * @return array<int, mixed>
      */
     protected function resolveDependencies(array $parameters, array $primitives = [], string $className = ''): array
@@ -337,28 +302,22 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Resolve a single dependency
+     * Resolve a single dependency.
      *
-     * @param \ReflectionParameter $parameter
      * @param array<string, mixed> $primitives
-     * @param string $className
-     * @return mixed
      */
     protected function resolveDependency(\ReflectionParameter $parameter, array &$primitives, string $className = ''): mixed
     {
         $paramName = $parameter->getName();
         $paramType = $parameter->getType();
 
-        // Check if we have a primitive value for this parameter
         if (!empty($primitives) && array_key_exists($paramName, $primitives)) {
             return $primitives[$paramName];
         }
 
-        // Handle class or interface dependencies
         if ($paramType instanceof \ReflectionNamedType && !$paramType->isBuiltin()) {
             $typeName = $paramType->getName();
 
-            // If it's nullable and not bound, return null
             if ($paramType->allowsNull() && !$this->has($typeName)) {
                 return null;
             }
@@ -366,17 +325,14 @@ class Container implements ArrayAccess
             return $this->get($typeName);
         }
 
-        // Check if parameter has a default value
         if ($parameter->isDefaultValueAvailable()) {
             return $parameter->getDefaultValue();
         }
 
-        // Check for variadic parameters
         if ($parameter->isVariadic()) {
             return $primitives;
         }
 
-        // Check if we can use positional primitives
         if (!empty($primitives)) {
             return array_shift($primitives);
         }
@@ -391,9 +347,6 @@ class Container implements ArrayAccess
 
     /**
      * Conditionally execute bindings.
-     *
-     * @param callable|bool $condition
-     * @return self|null
      */
     public function when(callable|bool $condition): ?self
     {
@@ -406,9 +359,6 @@ class Container implements ArrayAccess
 
     /**
      * Check if the container has a binding for the given service.
-     *
-     * @param string $key
-     * @return bool
      */
     public function has(string $key): bool
     {
@@ -417,9 +367,6 @@ class Container implements ArrayAccess
 
     /**
      * Check if the container has a resolved instance.
-     *
-     * @param string $key
-     * @return bool
      */
     public function hasInstance(string $key): bool
     {
@@ -428,9 +375,6 @@ class Container implements ArrayAccess
 
     /**
      * Forget a resolved instance while keeping its binding intact.
-     *
-     * @param string $abstract
-     * @return void
      */
     public function forgetResolved(string $abstract): void
     {
@@ -439,8 +383,6 @@ class Container implements ArrayAccess
 
     /**
      * Freeze the current set of binding keys as "boot-time".
-     *
-     * @return void
      */
     public function snapshotBootBindings(): void
     {
@@ -453,9 +395,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Forget the resolved instance of every singleton bound *after* boot finished
-     *
-     * @return void
+     * Forget the resolved instance of every singleton bound *after* boot finished.
      */
     public function forgetRequestScopedInstances(): void
     {
@@ -472,8 +412,6 @@ class Container implements ArrayAccess
 
     /**
      * Flush the container of all instances and bindings.
-     *
-     * @return void
      */
     public function flush(): void
     {
@@ -506,8 +444,6 @@ class Container implements ArrayAccess
 
     /**
      * Get the container instance.
-     *
-     * @return self
      */
     public static function getInstance(): self
     {
@@ -519,10 +455,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Set the container instance
-     *
-     * @param self $instance
-     * @return void
+     * Set the container instance.
      */
     public static function setInstance(self $instance): void
     {
@@ -530,9 +463,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Forget the container instance
-     *
-     * @return void
+     * Forget the container instance.
      */
     public static function forgetInstance(): void
     {
@@ -540,11 +471,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Register an existing instance as shared in the container
-     *
-     * @param string $abstract
-     * @param mixed $instance
-     * @return void
+     * Register an existing instance as shared in the container.
      */
     public function share(string $abstract, mixed $instance): void
     {
@@ -552,11 +479,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Extend a binding in the container
-     *
-     * @param string $abstract
-     * @param callable $extender
-     * @return void
+     * Extend a binding in the container.
      */
     public function extend(string $abstract, callable $extender): void
     {
@@ -574,11 +497,10 @@ class Container implements ArrayAccess
 
     /**
      * Run a callback with some bindings temporarily replaced, then put every one
-     * of them back exactly as it was, even when the callback throws
+     * of them back exactly as it was, even when the callback throws.
      *
      * @param array<string, mixed> $overrides
      * @param callable(self): mixed $callback
-     * @return mixed
      */
     public function using(array $overrides, callable $callback): mixed
     {
@@ -620,11 +542,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Alias a type to a different name
-     *
-     * @param string $abstract
-     * @param string $alias
-     * @return void
+     * Alias a type to a different name.
      */
     public function alias(string $abstract, string $alias): void
     {
@@ -635,11 +553,9 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Call the given callback with dependency injection
+     * Call the given callback with dependency injection.
      *
-     * @param callable $callback
      * @param array<string, mixed> $parameters
-     * @return mixed
      */
     public function call(callable $callback, array $parameters = []): mixed
     {
@@ -665,7 +581,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Resolve dependencies with attribute support
+     * Resolve dependencies with attribute support.
      *
      * @param \ReflectionParameter[] $parameters
      * @param array<string, mixed> $primitives
@@ -709,10 +625,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Check if a binding is a singleton
-     *
-     * @param string $abstract
-     * @return bool
+     * Check if a binding is a singleton.
      */
     public function isSingleton(string $abstract): bool
     {
@@ -720,7 +633,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Get all registered aliases
+     * Get all registered aliases.
      *
      * @return array<string, array{concrete: mixed, singleton: bool}>
      */
@@ -733,10 +646,8 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Resolve all dependencies for a given class method
+     * Resolve all dependencies for a given class method.
      *
-     * @param string $class
-     * @param string $method
      * @param array<string, mixed> $parameters
      * @return array<int, mixed>
      */
@@ -748,10 +659,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Check if the container is currently resolving the given abstract
-     *
-     * @param string $abstract
-     * @return bool
+     * Check if the container is currently resolving the given abstract.
      */
     public function isResolving(string $abstract): bool
     {
@@ -759,10 +667,9 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Register a service provider
+     * Register a service provider.
      *
      * @param object|class-string $provider
-     * @return void
      */
     public function register(object|string $provider): void
     {
@@ -785,8 +692,6 @@ class Container implements ArrayAccess
 
     /**
      * Flush all container bindings and instances.
-     *
-     * @return void
      */
     public function reset(): void
     {
@@ -794,10 +699,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Check if the given abstract has been resolved at least once
-     *
-     * @param string $abstract
-     * @return bool
+     * Check if the given abstract has been resolved at least once.
      */
     public function resolved(string $abstract): bool
     {
