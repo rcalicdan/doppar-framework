@@ -40,7 +40,8 @@
   "require-dev": {
     "mockery/mockery": "^1.6",
     "phpstan/phpstan": "^2.1",
-    "phpunit/phpunit": "^13.3"
+    "phpunit/phpunit": "^13.3",
+    "typephp/typephp": "^0.11"
   },
   "autoload": {
     "psr-4": {
