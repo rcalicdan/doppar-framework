@@ -10,6 +10,10 @@ use Phaseolies\Database\Entity\Model;
  * @property string|null $remember_token
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
+ *
+ * @method static \Phaseolies\Database\Entity\Builder where(string|callable $field, mixed $operator = null, mixed $value = null)
+ * @method static static|null find(string|int|array<int|string, mixed> $primaryKey)
+ * @mixin \Phaseolies\Database\Entity\Builder
  */
 abstract class Authable extends Model
 {

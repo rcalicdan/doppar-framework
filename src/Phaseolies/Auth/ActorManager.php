@@ -64,7 +64,7 @@ class ActorManager
      * Allows auth()->check(), auth()->user(), etc. to keep working without explicitly calling auth()->actor('web')->...
      *
      * @param string $method
-     * @param array  $args
+     * @param list<mixed> $args
      * @return mixed
      */
     public function __call(string $method, array $args): mixed

@@ -28,32 +28,44 @@ trait InteractsWithTwoFactorAuth
     /**
      * Enable 2FA for the current user
      *
-     * @return array
+     * @return array{secret: non-empty-string, qr_code_url: string, recovery_codes: list<string>}
+     * @throws \Exception
      */
     public function enableTwoFactorAuth(): array
     {
         $user = $this->user();
+
+        if (!$user) {
+            throw new \RuntimeException("No authenticated user.");
+        }
 
         if (!is_null($user->getTwoFactorSecret())) {
             throw new \Exception("2FA Already enabled");
         }
 
         $secret = Base32::encodeUpper(random_bytes(20));
+        assert($secret !== '');
 
         $totp = TOTP::create(
             $secret,
             30,
             'sha1',
             6,
-            $this->id(),
+            (int) ($this->id() ?? 0),
             $this->getClock()
         );
 
-        $host   = parse_url(config('app.url'), PHP_URL_HOST);
-        $issuer = preg_replace('/[^a-zA-Z0-9.\-_]/', '', $host);
+        $hostUrl = config('app.url');
+        $host    = is_string($hostUrl) ? parse_url($hostUrl, PHP_URL_HOST) : null;
+        $issuer  = is_string($host) ? preg_replace('/[^a-zA-Z0-9.\-_]/', '', $host) : null;
 
-        $totp->setLabel(strtolower(trim(config('app.name'))));
-        $totp->setIssuer($issuer);
+        $appName = (string) config('app.name', 'doppar');
+        $label   = strtolower(trim($appName));
+        $totp->setLabel($label !== '' ? $label : 'doppar');
+
+        if (!empty($issuer)) {
+            $totp->setIssuer($issuer);
+        }
 
         $recoveryCodes = $this->generateRecoveryCodes();
 
@@ -77,6 +89,10 @@ trait InteractsWithTwoFactorAuth
     {
         $user = $this->user();
 
+        if (!$user) {
+            return false;
+        }
+
         $user->setTwoFactorSecret(null);
         $user->setTwoFactorRecoveryCodes(null);
 
@@ -86,7 +102,7 @@ trait InteractsWithTwoFactorAuth
     /**
      * Generate recovery codes
      *
-     * @return array
+     * @return list<string>
      */
     protected function generateRecoveryCodes(): array
     {
@@ -106,22 +122,35 @@ trait InteractsWithTwoFactorAuth
      */
     public function verifyTwoFactorCode(string $code): bool
     {
-        $authModel = $this->getModel();
-        $user      = $authModel::find(session($this->getTwoFactorUserKey()));
+        if ($code === '') {
+            return false;
+        }
 
-        if (is_null($user->getTwoFactorSecret())) {
+        $pendingUserId = session($this->getTwoFactorUserKey());
+        if (!$pendingUserId) {
+            return false;
+        }
+
+        $authModel = $this->getModel();
+        $user      = $authModel::find($pendingUserId);
+
+        if (!$user || is_null($user->getTwoFactorSecret())) {
             return false;
         }
 
         try {
+            /** @var string $secret */
             $secret = Crypt::decrypt($user->getTwoFactorSecret());
+            if ($secret === '') {
+                return false;
+            }
 
             $totp = TOTP::create(
                 $secret,
                 30,
                 'sha1',
                 6,
-                session($this->getTwoFactorUserKey()),
+                (int) $pendingUserId,
                 $this->getClock()
             );
 
@@ -146,12 +175,16 @@ trait InteractsWithTwoFactorAuth
 
         $codes = Crypt::decrypt($user->getTwoFactorRecoveryCodes());
 
+        if (!is_array($codes)) {
+            return false;
+        }
+
         foreach ($codes as $key => $recoveryCode) {
             if (strtoupper(trim($code)) === $recoveryCode) {
                 unset($codes[$key]);
 
                 if (!empty($codes)) {
-                    $user->setTwoFactorRecoveryCodes(Crypt::encrypt(json_encode($codes)));
+                    $user->setTwoFactorRecoveryCodes(Crypt::encrypt(json_encode(array_values($codes))));
                 } else {
                     $user->setTwoFactorRecoveryCodes(null);
                 }
@@ -167,13 +200,17 @@ trait InteractsWithTwoFactorAuth
     /**
      * Generate new recovery codes
      *
-     * @return array
+     * @return list<string>
      */
     public function generateNewRecoveryCodes(): array
     {
         $recoveryCodes = $this->generateRecoveryCodes();
 
         $user = $this->user();
+        if (!$user) {
+            throw new \RuntimeException("No authenticated user.");
+        }
+
         $user->setTwoFactorRecoveryCodes(Crypt::encrypt(json_encode($recoveryCodes)));
         $user->save();
 
@@ -198,9 +235,19 @@ trait InteractsWithTwoFactorAuth
      */
     public function completeTwoFactorLogin(): bool
     {
+        $pendingUserId = session($this->getTwoFactorUserKey());
+        if (!$pendingUserId) {
+            return false;
+        }
+
         $authModel = $this->getModel();
-        $user      = $authModel::find(session($this->getTwoFactorUserKey()));
-        $remember  = session($this->getTwoFactorRememberKey());
+        $user      = $authModel::find($pendingUserId);
+
+        if (!$user) {
+            return false;
+        }
+
+        $remember  = (bool) session($this->getTwoFactorRememberKey());
 
         $this->setUser($user);
 
@@ -220,7 +267,6 @@ trait InteractsWithTwoFactorAuth
      * Generate QR code image for 2FA setup
      *
      * @param string $qrCodeUrl
-     * @param int $size
      * @return string
      */
     public function generateTwoFactorQrCode(string $qrCodeUrl): string

@@ -11,7 +11,7 @@ class Authenticate
     use InteractsWithTwoFactorAuth, InteractsWithRememberCookie;
 
     /**
-     * @var array
+     * @var array<string, mixed>
      */
     private $data = [];
 
@@ -25,7 +25,7 @@ class Authenticate
     /**
      * The actor configuration array from config/auth.php.
      *
-     * @var array
+     * @var array<string, mixed>
      */
     protected array $config;
 
@@ -47,7 +47,7 @@ class Authenticate
      * Create a new actor instance.
      *
      * @param string $actorName
-     * @param array  $config
+     * @param array<string, mixed>  $config
      */
     public function __construct(string $actorName, array $config)
     {
@@ -139,7 +139,7 @@ class Authenticate
     /**
      * Attempt to authenticate a user using credentials.
      *
-     * @param array $credentials
+     * @param array<string, mixed> $credentials
      * @param bool $remember
      * @return bool
      * @throws \Exception
@@ -267,9 +267,19 @@ class Authenticate
             }
 
             if ($hasAuthApi) {
-                return $this->resolvedUser = $hasAuthApi
-                    ? app(\Doppar\Flarion\ApiAuthenticate::class)->user()
-                    : null;
+                $apiAuthClass = 'Doppar\\Flarion\\ApiAuthenticate';
+                if (!class_exists($apiAuthClass)) {
+                    return null;
+                }
+
+                $apiAuth = app($apiAuthClass);
+                if (!\is_object($apiAuth) || !method_exists($apiAuth, 'user')) {
+                    return null;
+                }
+
+                $user = $apiAuth->user();
+
+                return $this->resolvedUser = $user instanceof Authable ? $user : null;
             }
         }
 
