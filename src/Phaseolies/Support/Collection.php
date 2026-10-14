@@ -11,19 +11,28 @@ use ArrayAccess;
 use JsonSerializable;
 
 /**
+ * @template TKey of array-key
+ * @template TValue
+ * @extends RamseyCollection<TValue>
+ * @implements ArrayAccess<TKey, TValue>
+ * @implements IteratorAggregate<TKey, TValue>
  * @phpstan-consistent-constructor
  */
 class Collection extends RamseyCollection implements IteratorAggregate, ArrayAccess, JsonSerializable
 {
     /**
-     * @var array
+     * The internal data array.
+     *
+     * @var array<TKey, TValue>
      */
     protected array $data = [];
 
     /**
-     * @var string
+     * The model class name associated with the collection.
+     *
+     * @var string|null
      */
-    protected $model;
+    protected ?string $model = null;
 
     /**
      * Methods that can be used as `$collection->method->property` or `$collection->method->call()`.
@@ -36,16 +45,16 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     ];
 
     /**
+     * Create a new collection instance.
+     *
      * @param string $model
-     * @param array|null $data
+     * @param array<TKey, TValue>|null $data
      */
     public function __construct(string $model, ?array $data = [])
     {
         $this->model = $model;
-
-        $this->data = $data;
+        $this->data = $data ?? [];
     }
-
 
     /**
      * Access collection data properties directly.
@@ -53,14 +62,12 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * @param string $name
      * @return mixed|null
      */
-    public function __get($name)
+    public function __get(string $name): mixed
     {
-        // `map` and `each` have always taken precedence over a data key of the same name.
         if ($name === 'map' || $name === 'each') {
             return new HigherOrderCollectionProxy($this, $name);
         }
 
-        // The newer ones only apply when no data key has that name.
         if (in_array($name, static::$proxies, true) && !array_key_exists($name, $this->data)) {
             return new HigherOrderCollectionProxy($this, $name);
         }
@@ -69,12 +76,12 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Check if a property exists in the collection data
+     * Check if a property exists in the collection data.
      *
      * @param string $name
      * @return bool
      */
-    public function __isset($name)
+    public function __isset(string $name): bool
     {
         return array_key_exists($name, $this->data);
     }
@@ -85,7 +92,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * @param mixed $offset
      * @return bool
      */
-    public function offsetExists($offset): bool
+    public function offsetExists(mixed $offset): bool
     {
         return array_key_exists($offset, $this->data);
     }
@@ -96,7 +103,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * @param mixed $offset
      * @return mixed
      */
-    public function offsetGet($offset): mixed
+    public function offsetGet(mixed $offset): mixed
     {
         return $this->data[$offset] ?? null;
     }
@@ -104,18 +111,22 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Sets a value at the specified offset in the data array.
      *
-     * @param mixed $offset
-     * @param mixed $value
-     * @return void
+     * @param TKey|null $offset
+     * @param TValue $value
      */
-    public function offsetSet($offset, $value): void
+    public function offsetSet(mixed $offset, mixed $value): void
     {
         if ($offset === null) {
-            $this->data[] = $value;
+            $data = $this->data;
+            $data[] = $value;
+            /** @var array<TKey, TValue> $data */
+            $this->data = $data;
 
             return;
         }
 
+        /** @var TKey $offset */
+        /** @var TValue $value */
         $this->data[$offset] = $value;
     }
 
@@ -123,17 +134,16 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Removes the value at the specified offset from the data array.
      *
      * @param mixed $offset
-     * @return void
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset(mixed $offset): void
     {
         unset($this->data[$offset]);
     }
 
     /**
-     * Required for looping data
+     * Required for looping data.
      *
-     * @return Traversable
+     * @return ArrayIterator<TKey, TValue>
      */
     public function getIterator(): Traversable
     {
@@ -141,9 +151,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Specify data which should be serialized to JSON
+     * Specify data which should be serialized to JSON.
      *
-     * @return array
+     * @return array<TKey, mixed>
      */
     public function jsonSerialize(): array
     {
@@ -151,7 +161,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Count the number of data in the collection.
+     * Count the number of items in the collection.
      *
      * @return int
      */
@@ -161,9 +171,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Get all data in the collection
+     * Get all data in the collection.
      *
-     * @return array
+     * @return array<TKey, TValue>
      */
     public function all(): array
     {
@@ -173,9 +183,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the first item, or the first item that passes a test.
      *
-     * @param callable|null $callback fn($item, $key): bool
+     * @param (callable(TValue, TKey): bool)|null $callback
      * @param mixed $default
-     * @return mixed
+     * @return TValue|mixed
      */
     public function first(?callable $callback = null, mixed $default = null): mixed
     {
@@ -191,9 +201,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the last item, or the last item that passes a test.
      *
-     * @param callable|null $callback fn($item, $key): bool
+     * @param (callable(TValue, TKey): bool)|null $callback
      * @param mixed $default
-     * @return mixed
+     * @return TValue|mixed
      */
     public function last(?callable $callback = null, mixed $default = null): mixed
     {
@@ -207,9 +217,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Convert the collection to an array
+     * Convert the collection to an array.
      *
-     * @return array
+     * @return array<TKey, mixed>
      */
     public function toArray(): array
     {
@@ -219,26 +229,27 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Apply a callback to each item in the collection.
      *
-     * @param callable $callback
-     * @return static
+     * @template TMapValue
+     * @param callable(TValue, TKey): TMapValue $callback
+     * @return static<TKey, TMapValue>
      */
     public function map(callable $callback): static
     {
         $mappedItems = [];
 
-        foreach ($this->data as $item) {
-            $mappedItems[] = $callback($item);
+        foreach ($this->data as $key => $item) {
+            $mappedItems[$key] = $callback($item, $key);
         }
 
-        return new static($this->model, $mappedItems);
+        return new static((string) $this->model, $mappedItems);
     }
 
     /**
      * Filter the collection using the given callback. Without a callback, every
      * item that is "falsy" (null, false, 0, '', []) is removed.
      *
-     * @param callable|null $callback
-     * @return static
+     * @param (callable(TValue, TKey): bool)|null $callback
+     * @return static<TKey, TValue>
      */
     public function filter(?callable $callback = null): static
     {
@@ -246,17 +257,17 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
         foreach ($this->data as $key => $item) {
             if ($callback === null ? (bool) $item : $callback($item, $key)) {
-                $filteredItems[] = $item;
+                $filteredItems[$key] = $item;
             }
         }
 
-        return new static($this->model, $filteredItems);
+        return new static((string) $this->model, $filteredItems);
     }
 
     /**
      * Execute a callback over each item.
      *
-     * @param callable $callback
+     * @param callable(TValue, TKey): mixed $callback
      * @return $this
      */
     public function each(callable $callback): static
@@ -273,12 +284,15 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Add an item to the end of the collection.
      *
-     * @param mixed $item
+     * @param TValue $item
      * @return $this
      */
     public function push(mixed $item): static
     {
-        $this->data[] = $item;
+        $data = $this->data;
+        $data[] = $item;
+        /** @var array<TKey, TValue> $data */
+        $this->data = $data;
 
         return $this;
     }
@@ -287,7 +301,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Flatten a multi-dimensional collection into a single level.
      *
      * @param int $depth
-     * @return static
+     * @return static<int, mixed>
      */
     public function flatten(int $depth = PHP_INT_MAX): static
     {
@@ -312,14 +326,14 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
                 foreach (array_reverse(array_values($item)) as $subItem) {
                     $stack[] = [
                         'item' => $subItem,
-                        'depth' => $currentDepth + 1
+                        'depth' => $currentDepth + 1,
                     ];
                 }
             } elseif ($item instanceof Collection) {
                 foreach (array_reverse($item->all()) as $subItem) {
                     $stack[] = [
                         'item' => $subItem,
-                        'depth' => $currentDepth + 1
+                        'depth' => $currentDepth + 1,
                     ];
                 }
             } else {
@@ -327,17 +341,17 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
             }
         }
 
-        return new static($this->model, $result);
+        return new static((string) $this->model, $result);
     }
 
     /**
-     * Get the values
+     * Get the values.
      *
-     * @return static
+     * @return static<int, TValue>
      */
     public function values(): static
     {
-        return new static($this->model, array_values($this->data));
+        return new static((string) $this->model, array_values($this->data));
     }
 
     /**
@@ -345,27 +359,25 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      *
      * @param string|null $key
      * @param bool $strict
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function unique(?string $key = null, bool $strict = false): static
     {
         $uniqueItems = [];
         $exists = [];
 
-        foreach ($this->data as $item) {
+        foreach ($this->data as $origKey => $item) {
             $value = $key !== null ? $this->valueFrom($item, $key) : $item;
 
-            // A float used directly as an array key is truncated to an int, which made
-            // 1.5 and 1.2 look alike. Scalars are keyed by their string form instead.
             $serialized = $strict ? serialize($value) : (is_scalar($value) ? (string) $value : serialize($value));
 
             if (!isset($exists[$serialized])) {
                 $exists[$serialized] = true;
-                $uniqueItems[] = $item;
+                $uniqueItems[$origKey] = $item;
             }
         }
 
-        return new static($this->model, $uniqueItems);
+        return new static((string) $this->model, $uniqueItems);
     }
 
     /**
@@ -373,7 +385,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      *
      * @param string $value
      * @param string|null $key
-     * @return static
+     * @return static<array-key, mixed>
      */
     public function pluck(string $value, ?string $key = null): static
     {
@@ -385,12 +397,12 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
             if ($key === null) {
                 $results[] = $itemValue;
-            } elseif ($itemKey !== null) {
+            } elseif ($itemKey !== null && (is_string($itemKey) || is_int($itemKey))) {
                 $results[$itemKey] = $itemValue;
             }
         }
 
-        return new static($this->model, $results);
+        return new static((string) $this->model, $results);
     }
 
     /**
@@ -417,7 +429,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Output or return memory usage stats related to the current collection.
      *
      * @param bool $asString
-     * @return string|array
+     * @return string|array<string, mixed>
      */
     public function withMemoryUsage(bool $asString = true): string|array
     {
@@ -445,19 +457,17 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Map the collection and group the results by the given key.
      *
-     * @param callable|string $groupBy
-     * @param callable|null $mapCallback
-     * @return array
+     * @param (callable(TValue, TKey): array-key)|string $groupBy
+     * @param (callable(TValue, TKey): mixed)|null $mapCallback
+     * @return array<string, array<int, mixed>>
      */
-    public function mapAsGroup($groupBy, ?callable $mapCallback = null): array
+    public function mapAsGroup(callable|string $groupBy, ?callable $mapCallback = null): array
     {
         $results = [];
-
         $groupResolver = $this->buildKeyResolver($groupBy);
 
         foreach ($this->data as $key => $item) {
             $groupKey = $groupResolver($item, $key);
-
             $mappedItem = $mapCallback ? $mapCallback($item, $key) : $item;
 
             if ($groupKey !== null) {
@@ -472,19 +482,17 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Map the collection and use the given key as array keys.
      *
-     * @param callable|string $keyBy
-     * @param callable|null $mapCallback
-     * @return array
+     * @param (callable(TValue, TKey): array-key)|string $keyBy
+     * @param (callable(TValue, TKey): mixed)|null $mapCallback
+     * @return array<string, mixed>
      */
-    public function mapAsKey($keyBy, ?callable $mapCallback = null): array
+    public function mapAsKey(callable|string $keyBy, ?callable $mapCallback = null): array
     {
         $results = [];
-
         $keyResolver = $this->buildKeyResolver($keyBy);
 
         foreach ($this->data as $index => $item) {
             $itemKey = $keyResolver($item, $index);
-
             $mappedItem = $mapCallback ? $mapCallback($item, $index) : $item;
 
             if ($itemKey !== null) {
@@ -499,12 +507,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Build a key resolver from various input types.
      *
-     * @param mixed $key A callback, or the name of a key (dot notation allowed)
+     * @param mixed $key
      * @return callable
      */
-    protected function buildKeyResolver($key): callable
+    protected function buildKeyResolver(mixed $key): callable
     {
-        // A string is a key, never a callback: `date`, `count` and `time` are also PHP functions.
         if (!is_string($key) && is_callable($key)) {
             return $key;
         }
@@ -513,14 +520,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Read a key from an item. Works on arrays, objects (including models) and
-     * ArrayAccess values, and understands dot notation for nested values:
-     * `valueFrom($row, 'user.address.city')`. A key that really contains a dot
-     * is tried as it is first.
+     * Read a key from an item. Works on arrays, objects, and ArrayAccess.
      *
      * @param mixed $item
      * @param string|int $key
-     * @return mixed Null when the value is not there
+     * @return mixed
      */
     public function valueFrom(mixed $item, string|int $key): mixed
     {
@@ -545,9 +549,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
+     * Read a single key from an item.
+     *
      * @param mixed $item
      * @param string|int $key
-     * @param bool $found Set to whether the key was there
+     * @param bool $found
      * @return mixed
      */
     private function readKey(mixed $item, string|int $key, bool &$found = false): mixed
@@ -584,23 +590,23 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Group the collection by the given key with mapping capability.
      *
-     * @param callable|string $groupBy
-     * @param callable|null $mapCallback
-     * @return array
+     * @param (callable(TValue, TKey): array-key)|string $groupBy
+     * @param (callable(TValue, TKey): mixed)|null $mapCallback
+     * @return array<string, array<int, mixed>>
      */
-    public function groupBy($groupBy, ?callable $mapCallback = null): array
+    public function groupBy(callable|string $groupBy, ?callable $mapCallback = null): array
     {
         return $this->mapAsGroup($groupBy, $mapCallback);
     }
 
     /**
-     * Key the collection by the given key with mapping capability
+     * Key the collection by the given key with mapping capability.
      *
-     * @param callable|string $keyBy
-     * @param callable|null $mapCallback
-     * @return array
+     * @param (callable(TValue, TKey): array-key)|string $keyBy
+     * @param (callable(TValue, TKey): mixed)|null $mapCallback
+     * @return array<string, mixed>
      */
-    public function keyBy($keyBy, ?callable $mapCallback = null): array
+    public function keyBy(callable|string $keyBy, ?callable $mapCallback = null): array
     {
         return $this->mapAsKey($keyBy, $mapCallback);
     }
@@ -608,24 +614,18 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Sort the collection by a given key or callback, or by several of them.
      *
-     *     $users->sortBy('age');
-     *     $users->sortBy('profile.city');                       // dot notation
-     *     $users->sortBy(['age', 'name']);                      // by age, then name
-     *     $users->sortBy([['age', 'desc'], ['name', 'asc']]);   // with a direction each
-     *
-     * @param callable|string|array $callback
+     * @param (callable(TValue, TKey): mixed)|string|array<int, mixed> $callback
      * @param int $options
      * @param bool $descending
-     * @return static
+     * @return static<TKey, TValue>
      */
-    public function sortBy($callback, int $options = SORT_REGULAR, bool $descending = false): static
+    public function sortBy(callable|string|array $callback, int $options = SORT_REGULAR, bool $descending = false): static
     {
         if (is_array($callback) && !is_callable($callback)) {
             return $this->sortByMany($callback, $options, $descending);
         }
 
         $results = [];
-
         $resolver = $this->buildKeyResolver($callback);
 
         foreach ($this->data as $key => $item) {
@@ -640,19 +640,19 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
         $sortedData = [];
         foreach (array_keys($results) as $key) {
-            $sortedData[] = $this->data[$key];
+            $sortedData[$key] = $this->data[$key];
         }
 
-        return new static($this->model, $sortedData);
+        return new static((string) $this->model, $sortedData);
     }
 
     /**
      * Sort by several criteria; each is a key, a callback, or [key, 'asc'|'desc'].
      *
-     * @param array $criteria
+     * @param array<int, mixed> $criteria
      * @param int $options
      * @param bool $descending
-     * @return static
+     * @return static<TKey, TValue>
      */
     protected function sortByMany(array $criteria, int $options, bool $descending): static
     {
@@ -671,13 +671,12 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
         $keyed = [];
         foreach ($this->data as $key => $item) {
-            $keyed[] = [$item, array_map(fn($r) => $r[0]($item, $key), $resolvers)];
+            $keyed[] = [$key, $item, array_map(fn($r) => $r[0]($item, $key), $resolvers)];
         }
 
-        // usort is stable, so items that tie on every criterion keep their order.
         usort($keyed, function ($a, $b) use ($resolvers, $options) {
             foreach ($resolvers as $i => [, $desc]) {
-                $result = $this->compareValues($a[1][$i], $b[1][$i], $options);
+                $result = $this->compareValues($a[2][$i], $b[2][$i], $options);
 
                 if ($result !== 0) {
                     return $desc ? -$result : $result;
@@ -687,13 +686,20 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
             return 0;
         });
 
-        return new static($this->model, array_column($keyed, 0));
+        $sorted = [];
+        foreach ($keyed as $entry) {
+            $sorted[$entry[0]] = $entry[1];
+        }
+
+        return new static((string) $this->model, $sorted);
     }
 
     /**
+     * Compare two values according to the given sort flags.
+     *
      * @param mixed $a
      * @param mixed $b
-     * @param int $options One of the SORT_* flags, optionally with SORT_FLAG_CASE
+     * @param int $options
      * @return int
      */
     protected function compareValues(mixed $a, mixed $b, int $options): int
@@ -712,11 +718,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Sort the collection in descending order by a given key or callback.
      *
-     * @param callable|string $callback
+     * @param (callable(TValue, TKey): mixed)|string $callback
      * @param int $options
-     * @return static
+     * @return static<TKey, TValue>
      */
-    public function sortByDesc($callback, int $options = SORT_REGULAR): static
+    public function sortByDesc(callable|string $callback, int $options = SORT_REGULAR): static
     {
         return $this->sortBy($callback, $options, true);
     }
@@ -724,8 +730,8 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Transform each item in the collection into one or more key-value pairs grouped by keys.
      *
-     * @param callable $callback
-     * @return array
+     * @param callable(TValue, TKey): array<array-key, mixed> $callback
+     * @return array<string, array<int, mixed>>
      */
     public function mapToGroups(callable $callback): array
     {
@@ -745,8 +751,8 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Transform the collection into a flat associative array with custom keys.
      *
-     * @param callable $callback
-     * @return array
+     * @param callable(TValue, TKey): array<array-key, mixed> $callback
+     * @return array<string, mixed>
      */
     public function mapWithKeys(callable $callback): array
     {
@@ -771,14 +777,14 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      */
     public function toJson(int $options = 0): string
     {
-        return json_encode($this->toArray(), $options);
+        return (string) json_encode($this->toArray(), $options);
     }
 
     /**
      * Take the first or last {$limit} items from the collection.
      *
      * @param int $limit
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function take(int $limit): static
     {
@@ -786,34 +792,33 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
             return $this->takeLast(abs($limit));
         }
 
-        return new static($this->model, array_slice($this->data, 0, $limit));
+        return new static((string) $this->model, array_slice($this->data, 0, $limit, true));
     }
 
     /**
      * Take the last {$limit} items from the collection.
      *
      * @param int $limit
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function takeLast(int $limit): static
     {
         if ($limit <= 0) {
-            return new static($this->model, []);
+            return new static((string) $this->model, []);
         }
 
-        return new static($this->model, array_slice($this->data, -$limit));
+        return new static((string) $this->model, array_slice($this->data, -$limit, null, true));
     }
 
     /**
      * Ensure the model is preserved when the collection is serialized by cache.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function __serialize(): array
     {
         $parent = [];
 
-        // If the parent defines __serialize, merge its payload to avoid losing state.
         if (method_exists(get_parent_class($this) ?: '', '__serialize')) {
             $parent = parent::__serialize();
         }
@@ -823,23 +828,19 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
             '__ph_data' => $this->data,
         ];
 
-        // Merge parent state (if any) with our own
         return array_merge($parent, $payload);
     }
 
     /**
      * Restore the model and data when the collection is unserialized by cache.
      *
-     * @param array $data
-     * @return void
+     * @param array<string, mixed> $data
      */
     public function __unserialize(array $data): void
     {
-        // Restore our own state
-        $this->model = $data['__ph_model'] ?? $this->model ?? null;
-        $this->data = $data['__ph_data'] ?? $this->data ?? [];
+        $this->model = isset($data['__ph_model']) && is_string($data['__ph_model']) ? $data['__ph_model'] : null;
+        $this->data = isset($data['__ph_data']) && is_array($data['__ph_data']) ? $data['__ph_data'] : [];
 
-        // If the parent defines __unserialize, pass remaining data to it
         if (method_exists(get_parent_class($this) ?: '', '__unserialize')) {
             unset($data['__ph_model'], $data['__ph_data']);
             parent::__unserialize($data);
@@ -847,8 +848,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * The type of the items, as the parent collection reports it. Doppar collections
-     * hold anything, so this is the model they were created for.
+     * The type of the items, as the parent collection reports it.
      *
      * @return string
      */
@@ -859,10 +859,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Combine this collection with other collections or arrays into a new one.
-     * Numeric keys are renumbered; a string key from a later one replaces an earlier one.
      *
-     * @param iterable ...$collections
-     * @return static
+     * @param iterable<mixed, mixed> ...$collections
+     * @return static<array-key, mixed>
      */
     public function merge(iterable ...$collections): static
     {
@@ -874,24 +873,24 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
                 : (is_array($collection) ? $collection : iterator_to_array($collection));
         }
 
-        return new static($this->model, array_merge(...$merged));
+        return new static((string) $this->model, array_merge(...$merged));
     }
 
     /**
      * Get the model class name associated to this collection.
      *
-     * @return ?string
+     * @return string|null
      */
     public function getModel(): ?string
     {
-        return $this->model ?? null;
+        return $this->model;
     }
 
     /**
      * Split collection into chunks of given size.
      *
      * @param int $size
-     * @return static
+     * @return static<int, array<TKey, TValue>>
      */
     public function chunk(int $size): static
     {
@@ -899,19 +898,17 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
             throw new \InvalidArgumentException('Chunk size must be greater than 0');
         }
 
-        $chunks = [];
-        foreach (array_chunk($this->data, $size, false) as $chunk) {
-            $chunks[] = $chunk;
-        }
+        /** @var array<int, array<TKey, TValue>> $chunks */
+        $chunks = array_chunk($this->data, $size, false);
 
-        return new static($this->model, $chunks);
+        return new static((string) $this->model, $chunks);
     }
 
     /**
-     * Split collection into two groups based on condition
+     * Split collection into two groups based on condition.
      *
-     * @param callable $callback
-     * @return array [passedCollection, failedCollection]
+     * @param callable(TValue, TKey): bool $callback
+     * @return array{0: static<TKey, TValue>, 1: static<TKey, TValue>}
      */
     public function partition(callable $callback): array
     {
@@ -920,15 +917,15 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
         foreach ($this->data as $key => $item) {
             if ($callback($item, $key)) {
-                $passed[] = $item;
+                $passed[$key] = $item;
             } else {
-                $failed[] = $item;
+                $failed[$key] = $item;
             }
         }
 
         return [
-            new static($this->model, $passed),
-            new static($this->model, $failed)
+            new static((string) $this->model, $passed),
+            new static((string) $this->model, $failed),
         ];
     }
 
@@ -936,46 +933,46 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Get items not present in the given items.
      *
      * @param mixed $items
-     * @return static
+     * @return static<TKey, TValue>
      */
-    public function diff($items): static
+    public function diff(mixed $items): static
     {
         $compare = $items instanceof self ? $items->all() : (array) $items;
 
         $result = [];
-        foreach ($this->data as $item) {
+        foreach ($this->data as $key => $item) {
             if (!in_array($item, $compare, true)) {
-                $result[] = $item;
+                $result[$key] = $item;
             }
         }
 
-        return new static($this->model, $result);
+        return new static((string) $this->model, $result);
     }
 
     /**
-     * Get items present in both this collection and given items
+     * Get items present in both this collection and given items.
      *
      * @param mixed $items
-     * @return static
+     * @return static<TKey, TValue>
      */
-    public function intersect($items): static
+    public function intersect(mixed $items): static
     {
         $compare = $items instanceof self ? $items->all() : (array) $items;
 
         $result = [];
-        foreach ($this->data as $item) {
+        foreach ($this->data as $key => $item) {
             if (in_array($item, $compare, true)) {
-                $result[] = $item;
+                $result[$key] = $item;
             }
         }
 
-        return new static($this->model, $result);
+        return new static((string) $this->model, $result);
     }
 
     /**
      * Execute a callback over the collection without modifying it.
      *
-     * @param callable $callback
+     * @param callable($this): void $callback
      * @return $this
      */
     public function tap(callable $callback): static
@@ -986,10 +983,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Pass the collection to a callback and return the result
+     * Pass the collection to a callback and return the result.
      *
-     * @param callable $callback
-     * @return mixed
+     * @template TPipeReturn
+     * @param callable($this): TPipeReturn $callback
+     * @return TPipeReturn
      */
     public function pipe(callable $callback): mixed
     {
@@ -1000,35 +998,34 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Find duplicate items in the collection.
      *
      * @param string|null $key
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function duplicates(?string $key = null): static
     {
         $seen = [];
         $duplicates = [];
 
-        foreach ($this->data as $item) {
+        foreach ($this->data as $origKey => $item) {
             $value = $key !== null ? $this->valueFrom($item, $key) : $item;
-
             $serialized = is_scalar($value) ? (string) $value : serialize($value);
 
             if (isset($seen[$serialized])) {
-                $duplicates[] = $item;
+                $duplicates[$origKey] = $item;
             } else {
                 $seen[$serialized] = true;
             }
         }
 
-        return new static($this->model, $duplicates);
+        return new static((string) $this->model, $duplicates);
     }
 
     /**
-     * Get the sum of values
+     * Get the sum of values.
      *
-     * @param string|callable|null $callback
+     * @param (callable(TValue, TKey): (int|float))|string|null $callback
      * @return int|float
      */
-    public function sum($callback = null): int|float
+    public function sum(callable|string|null $callback = null): int|float
     {
         if ($callback === null) {
             return array_sum($this->data);
@@ -1044,10 +1041,10 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the average (mean) value.
      *
-     * @param string|callable|null $callback
+     * @param (callable(TValue, TKey): (int|float))|string|null $callback
      * @return int|float|null
      */
-    public function avg($callback = null): int|float|null
+    public function avg(callable|string|null $callback = null): int|float|null
     {
         $count = $this->count();
 
@@ -1061,12 +1058,12 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the minimum value.
      *
-     * @param string|callable|null $callback
+     * @param (callable(TValue, TKey): mixed)|string|null $callback
      * @return mixed
      */
-    public function min($callback = null): mixed
+    public function min(callable|string|null $callback = null): mixed
     {
-        if ($this->isEmpty()) {
+        if ($this->data === []) {
             return null;
         }
 
@@ -1084,12 +1081,12 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the maximum value.
      *
-     * @param string|callable|null $callback
+     * @param (callable(TValue, TKey): mixed)|string|null $callback
      * @return mixed
      */
-    public function max($callback = null): mixed
+    public function max(callable|string|null $callback = null): mixed
     {
-        if ($this->isEmpty()) {
+        if ($this->data === []) {
             return null;
         }
 
@@ -1107,14 +1104,13 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get a single item that matches the criteria, or throw an exception.
      *
-     * @param callable|null $callback
-     * @return mixed
+     * @param (callable(TValue, TKey): bool)|null $callback
+     * @return TValue
      * @throws \RuntimeException
      */
     public function sole(?callable $callback = null): mixed
     {
         $filtered = $callback ? $this->filter($callback) : $this;
-
         $count = $filtered->count();
 
         if ($count === 0) {
@@ -1131,8 +1127,8 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the items that do not pass the test (the opposite of filter).
      *
-     * @param callable $callback fn($item, $key): bool
-     * @return static
+     * @param callable(TValue, TKey): bool $callback
+     * @return static<TKey, TValue>
      */
     public function reject(callable $callback): static
     {
@@ -1142,7 +1138,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Determine whether every item passes the test. True for an empty collection.
      *
-     * @param callable $callback fn($item, $key): bool
+     * @param callable(TValue, TKey): bool $callback
      * @return bool
      */
     public function every(callable $callback): bool
@@ -1159,7 +1155,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Determine whether at least one item passes the test. False for an empty collection.
      *
-     * @param callable $callback fn($item, $key): bool
+     * @param callable(TValue, TKey): bool $callback
      * @return bool
      */
     public function some(callable $callback): bool
@@ -1176,51 +1172,47 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Reverse the order of the items.
      *
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function reverse(): static
     {
-        return new static($this->model, array_reverse($this->data));
+        return new static((string) $this->model, array_reverse($this->data, true));
     }
 
     /**
      * Get the keys of the collection as a new collection.
      *
-     * @return static
+     * @return static<int, TKey>
      */
     public function keys(): static
     {
-        return new static($this->model, array_keys($this->data));
+        return new static((string) $this->model, array_keys($this->data));
     }
 
     /**
      * Keep only the items with the given keys.
      *
-     * @param array $keys
-     * @return static
+     * @param array<int|string> $keys
+     * @return static<TKey, TValue>
      */
     public function only(array $keys): static
     {
-        return new static($this->model, array_intersect_key($this->data, array_flip($keys)));
+        return new static((string) $this->model, array_intersect_key($this->data, array_flip($keys)));
     }
 
     /**
      * Remove the items with the given keys.
      *
-     * @param array $keys
-     * @return static
+     * @param array<int|string> $keys
+     * @return static<TKey, TValue>
      */
     public function except(array $keys): static
     {
-        return new static($this->model, array_diff_key($this->data, array_flip($keys)));
+        return new static((string) $this->model, array_diff_key($this->data, array_flip($keys)));
     }
 
     /**
      * Get the first item whose value for a key matches.
-     *
-     *     $users->firstWhere('active');              // truthy
-     *     $users->firstWhere('age', 30);             // equal (==)
-     *     $users->firstWhere('age', '>=', 18);       // with an operator
      *
      * @param string $key
      * @param mixed $operator
@@ -1243,6 +1235,8 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
+     * Compare a retrieved value against an expected value using an operator.
+     *
      * @param mixed $retrieved
      * @param string $operator
      * @param mixed $value
@@ -1267,37 +1261,37 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Keep the items whose value for a key is one of the given values.
      *
      * @param string $key
-     * @param iterable $values
+     * @param iterable<mixed> $values
      * @param bool $strict
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function whereIn(string $key, iterable $values, bool $strict = false): static
     {
-        $values = is_array($values) ? $values : iterator_to_array($values);
+        $valArray = is_array($values) ? $values : iterator_to_array($values);
 
-        return $this->filter(fn($item) => in_array($this->valueFrom($item, $key), $values, $strict));
+        return $this->filter(fn($item) => in_array($this->valueFrom($item, $key), $valArray, $strict));
     }
 
     /**
      * Keep the items whose value for a key is none of the given values.
      *
      * @param string $key
-     * @param iterable $values
+     * @param iterable<mixed> $values
      * @param bool $strict
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function whereNotIn(string $key, iterable $values, bool $strict = false): static
     {
-        $values = is_array($values) ? $values : iterator_to_array($values);
+        $valArray = is_array($values) ? $values : iterator_to_array($values);
 
-        return $this->filter(fn($item) => !in_array($this->valueFrom($item, $key), $values, $strict));
+        return $this->filter(fn($item) => !in_array($this->valueFrom($item, $key), $valArray, $strict));
     }
 
     /**
      * Keep the items that have a value (not null) for a key.
      *
      * @param string $key
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function whereNotNull(string $key): static
     {
@@ -1308,7 +1302,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Keep the items that have no value (null) for a key.
      *
      * @param string $key
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function whereNull(string $key): static
     {
@@ -1318,8 +1312,8 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Count how many times each value occurs.
      *
-     * @param callable|string|null $callback A key or callback that picks the value; the item itself by default
-     * @return array<string, int>
+     * @param ((callable(TValue, TKey): array-key)|string)|null $callback
+     * @return array<array-key, int>
      */
     public function countBy(callable|string|null $callback = null): array
     {
@@ -1352,8 +1346,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Map each item to an array or collection, then join the results into one level.
      *
-     * @param callable $callback
-     * @return static
+     * @template TFlatMapValue
+     * @param callable(TValue, TKey): (array<mixed, TFlatMapValue>|Collection<array-key, TFlatMapValue>) $callback
+     * @return static<array-key, TFlatMapValue>
      */
     public function flatMap(callable $callback): static
     {
@@ -1363,7 +1358,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Join an array of arrays (or collections) into a single level.
      *
-     * @return static
+     * @return static<array-key, mixed>
      */
     public function collapse(): static
     {
@@ -1374,11 +1369,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Skip the first items.
      *
      * @param int $count
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function skip(int $count): static
     {
-        return new static($this->model, array_slice($this->data, max(0, $count)));
+        return new static((string) $this->model, array_slice($this->data, max(0, $count), null, true));
     }
 
     /**
@@ -1386,18 +1381,18 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      *
      * @param int $offset
      * @param int|null $length
-     * @return static
+     * @return static<TKey, TValue>
      */
     public function slice(int $offset, ?int $length = null): static
     {
-        return new static($this->model, array_slice($this->data, $offset, $length));
+        return new static((string) $this->model, array_slice($this->data, $offset, $length, true));
     }
 
     /**
      * Add items at the end. Numeric keys are renumbered.
      *
-     * @param iterable $items
-     * @return static
+     * @param iterable<mixed> $items
+     * @return static<int, mixed>
      */
     public function concat(iterable $items): static
     {
@@ -1407,7 +1402,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Find the key of a value, or of the first item that passes a test.
      *
-     * @param mixed $value A value, or a callable fn($item, $key): bool
+     * @param mixed $value
      * @param bool $strict
      * @return int|string|false
      */
@@ -1427,8 +1422,8 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * The middle value. Items that are null are ignored.
      *
-     * @param string|null $key Take the value from this key of each item
-     * @return int|float|null Null when there are no values
+     * @param string|null $key
+     * @return int|float|null
      */
     public function median(?string $key = null): int|float|null
     {
@@ -1448,11 +1443,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Run a callback when the value is truthy. A Closure value is called with the collection first.
+     * Run a callback when the value is truthy.
      *
      * @param mixed $value
-     * @param callable $callback fn($collection, $value)
-     * @param callable|null $default Runs when the value is falsy
+     * @param callable($this, mixed): mixed $callback
+     * @param (callable($this, mixed): mixed)|null $default
      * @return static|mixed
      */
     public function when(mixed $value, callable $callback, ?callable $default = null): mixed
@@ -1470,8 +1465,8 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Run a callback when the value is falsy.
      *
      * @param mixed $value
-     * @param callable $callback fn($collection, $value)
-     * @param callable|null $default Runs when the value is truthy
+     * @param callable($this, mixed): mixed $callback
+     * @param (callable($this, mixed): mixed)|null $default
      * @return static|mixed
      */
     public function unless(mixed $value, callable $callback, ?callable $default = null): mixed
@@ -1486,9 +1481,9 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Get all items in the collection
+     * Get all items in the collection.
      *
-     * @return array
+     * @return array<TKey, TValue>
      */
     public function get(): array
     {
