@@ -59,9 +59,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Create a stream of the numbers from $from to $to, one at a time.
      *
-     * @param int|float $from
-     * @param int|float $to
-     * @param int|float $step How much to move each time; the direction follows from and to
      * @return static<int, int|float>
      */
     public static function range(int|float $from, int|float $to, int|float $step = 1): static
@@ -90,7 +87,6 @@ class StreamCollection implements IteratorAggregate, Countable
      * Without a callback the numbers themselves are the items.
      *
      * @template TTimesValue
-     * @param int $count
      * @param (callable(int): TTimesValue)|null $callback
      * @return static<int, mixed>
      */
@@ -106,7 +102,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Create a stream of the lines of a file, read one at a time, without the line breaks.
      *
-     * @param string $path
      * @return static<int, string>
      * @throws \InvalidArgumentException
      */
@@ -247,7 +242,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Chunk the collection into chunks of the given size.
      *
-     * @param int $size
      * @return static<int, Collection<TKey, TValue>>
      */
     public function chunk(int $size): static
@@ -287,7 +281,7 @@ class StreamCollection implements IteratorAggregate, Countable
     public function each(callable $callback): static
     {
         foreach ($this as $key => $value) {
-            if ($callback($value, $key) === false) {
+            if ($callback($item = $value, $key) === false) {
                 break;
             }
         }
@@ -298,7 +292,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Convert the lazy collection to a regular collection.
      *
-     * @param string $model
      * @return Collection<TKey, TValue>
      */
     public function collect(string $model = ''): Collection
@@ -326,9 +319,10 @@ class StreamCollection implements IteratorAggregate, Countable
      * Get the first item, or the first item that passes a test. Stops reading as
      * soon as it has found it.
      *
+     * @template TDefault
      * @param (callable(TValue, TKey): bool)|null $callback
-     * @param mixed $default
-     * @return TValue|mixed
+     * @param TDefault|(\Closure(): TDefault) $default
+     * @return TValue|TDefault
      */
     public function first(?callable $callback = null, mixed $default = null): mixed
     {
@@ -344,9 +338,10 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Get the last item, or the last item that passes a test. Reads the whole stream.
      *
+     * @template TDefault
      * @param (callable(TValue, TKey): bool)|null $callback
-     * @param mixed $default
-     * @return TValue|mixed
+     * @param TDefault|(\Closure(): TDefault) $default
+     * @return TValue|TDefault
      */
     public function last(?callable $callback = null, mixed $default = null): mixed
     {
@@ -365,8 +360,6 @@ class StreamCollection implements IteratorAggregate, Countable
 
     /**
      * Count the number of items in the collection. Reads the whole stream.
-     *
-     * @return int
      */
     public function count(): int
     {
@@ -375,8 +368,6 @@ class StreamCollection implements IteratorAggregate, Countable
 
     /**
      * Determine if the collection is empty or not.
-     *
-     * @return bool
      */
     public function isEmpty(): bool
     {
@@ -388,8 +379,6 @@ class StreamCollection implements IteratorAggregate, Countable
 
     /**
      * Determine if the collection is not empty.
-     *
-     * @return bool
      */
     public function isNotEmpty(): bool
     {
@@ -399,8 +388,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Pluck an array of values from a given key.
      *
-     * @param string $value
-     * @param string|null $key
      * @return static<array-key, mixed>
      */
     public function pluck(string $value, ?string $key = null): static
@@ -423,10 +410,6 @@ class StreamCollection implements IteratorAggregate, Countable
 
     /**
      * Read a key from an item, with dot notation for nested values.
-     *
-     * @param mixed $item
-     * @param string|int $key
-     * @return mixed
      */
     private function valueFrom(mixed $item, string|int $key): mixed
     {
@@ -439,7 +422,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Flatten the collection.
      *
-     * @param int $depth
      * @return static<int, mixed>
      */
     public function flatten(int $depth = PHP_INT_MAX): static
@@ -481,8 +463,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Get unique items from the collection.
      *
-     * @param string|null $key
-     * @param bool $strict
      * @return static<TKey, TValue>
      */
     public function unique(?string $key = null, bool $strict = false): static
@@ -509,7 +489,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Skip the first $count items.
      *
-     * @param int $count
      * @return static<TKey, TValue>
      */
     public function skip(int $count): static
@@ -527,7 +506,6 @@ class StreamCollection implements IteratorAggregate, Countable
     /**
      * Take the first $count items, reading no more than that from the source.
      *
-     * @param int $count
      * @return static<TKey, TValue>
      */
     public function take(int $count): static
@@ -691,7 +669,6 @@ class StreamCollection implements IteratorAggregate, Countable
      * Add up the items, or a key or callback result of each, reading one item at a time.
      *
      * @param (callable(TValue, TKey): (int|float))|string|null $callback
-     * @return int|float
      */
     public function sum(callable|string|null $callback = null): int|float
     {
@@ -702,7 +679,6 @@ class StreamCollection implements IteratorAggregate, Countable
      * The average of the items, or null for an empty stream.
      *
      * @param (callable(TValue, TKey): (int|float))|string|null $callback
-     * @return int|float|null
      */
     public function avg(callable|string|null $callback = null): int|float|null
     {
@@ -721,7 +697,6 @@ class StreamCollection implements IteratorAggregate, Countable
      * The smallest value, or null for an empty stream.
      *
      * @param (callable(TValue, TKey): mixed)|string|null $callback
-     * @return mixed
      */
     public function min(callable|string|null $callback = null): mixed
     {
@@ -744,7 +719,6 @@ class StreamCollection implements IteratorAggregate, Countable
      * The largest value, or null for an empty stream.
      *
      * @param (callable(TValue, TKey): mixed)|string|null $callback
-     * @return mixed
      */
     public function max(callable|string|null $callback = null): mixed
     {
@@ -765,11 +739,6 @@ class StreamCollection implements IteratorAggregate, Countable
 
     /**
      * Extract the value to measure from an item using a key or callback.
-     *
-     * @param mixed $value
-     * @param mixed $key
-     * @param callable|string|null $callback
-     * @return mixed
      */
     private function measure(mixed $value, mixed $key, callable|string|null $callback): mixed
     {
@@ -784,7 +753,6 @@ class StreamCollection implements IteratorAggregate, Countable
      * Determine whether every item passes the test. Stops at the first that fails.
      *
      * @param callable(TValue, TKey): bool $callback
-     * @return bool
      */
     public function every(callable $callback): bool
     {
@@ -801,7 +769,6 @@ class StreamCollection implements IteratorAggregate, Countable
      * Determine whether at least one item passes the test. Stops at the first that does.
      *
      * @param callable(TValue, TKey): bool $callback
-     * @return bool
      */
     public function some(callable $callback): bool
     {
@@ -841,9 +808,6 @@ class StreamCollection implements IteratorAggregate, Countable
 
     /**
      * Convert the collection to JSON.
-     *
-     * @param int $options
-     * @return string
      */
     public function toJson(int $options = 0): string
     {

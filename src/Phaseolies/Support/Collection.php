@@ -29,8 +29,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * The model class name associated with the collection.
-     *
-     * @var string|null
      */
     protected ?string $model = null;
 
@@ -40,14 +38,25 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * @var array<int, string>
      */
     protected static array $proxies = [
-        'filter', 'reject', 'sum', 'avg', 'min', 'max', 'sortBy', 'sortByDesc',
-        'groupBy', 'keyBy', 'unique', 'every', 'some', 'flatMap',
+        'filter',
+        'reject',
+        'sum',
+        'avg',
+        'min',
+        'max',
+        'sortBy',
+        'sortByDesc',
+        'groupBy',
+        'keyBy',
+        'unique',
+        'every',
+        'some',
+        'flatMap',
     ];
 
     /**
      * Create a new collection instance.
      *
-     * @param string $model
      * @param array<TKey, TValue>|null $data
      */
     public function __construct(string $model, ?array $data = [])
@@ -58,9 +67,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Access collection data properties directly.
-     *
-     * @param string $name
-     * @return mixed|null
      */
     public function __get(string $name): mixed
     {
@@ -77,9 +83,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Check if a property exists in the collection data.
-     *
-     * @param string $name
-     * @return bool
      */
     public function __isset(string $name): bool
     {
@@ -89,8 +92,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Determines if the specified offset exists in the data array.
      *
-     * @param mixed $offset
-     * @return bool
+     * @param TKey $offset
      */
     public function offsetExists(mixed $offset): bool
     {
@@ -98,13 +100,14 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     }
 
     /**
-     * Returns the value at the specified offset, or null if it doesn't exist.
+     * Returns the value at the specified offset.
      *
-     * @param mixed $offset
-     * @return mixed
+     * @param TKey $offset
+     * @return TValue
      */
     public function offsetGet(mixed $offset): mixed
     {
+        /** @var TValue */
         return $this->data[$offset] ?? null;
     }
 
@@ -133,7 +136,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Removes the value at the specified offset from the data array.
      *
-     * @param mixed $offset
+     * @param TKey $offset
      */
     public function offsetUnset(mixed $offset): void
     {
@@ -162,8 +165,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Count the number of items in the collection.
-     *
-     * @return int
      */
     public function count(): int
     {
@@ -183,9 +184,10 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the first item, or the first item that passes a test.
      *
+     * @template TDefault
      * @param (callable(TValue, TKey): bool)|null $callback
-     * @param mixed $default
-     * @return TValue|mixed
+     * @param TDefault|(\Closure(): TDefault) $default
+     * @return TValue|TDefault
      */
     public function first(?callable $callback = null, mixed $default = null): mixed
     {
@@ -201,9 +203,10 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the last item, or the last item that passes a test.
      *
+     * @template TDefault
      * @param (callable(TValue, TKey): bool)|null $callback
-     * @param mixed $default
-     * @return TValue|mixed
+     * @param TDefault|(\Closure(): TDefault) $default
+     * @return TValue|TDefault
      */
     public function last(?callable $callback = null, mixed $default = null): mixed
     {
@@ -300,7 +303,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Flatten a multi-dimensional collection into a single level.
      *
-     * @param int $depth
      * @return static<int, mixed>
      */
     public function flatten(int $depth = PHP_INT_MAX): static
@@ -357,8 +359,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Return a new collection with unique items.
      *
-     * @param string|null $key
-     * @param bool $strict
      * @return static<TKey, TValue>
      */
     public function unique(?string $key = null, bool $strict = false): static
@@ -383,8 +383,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Pluck an array of values from a given key.
      *
-     * @param string $value
-     * @param string|null $key
      * @return static<array-key, mixed>
      */
     public function pluck(string $value, ?string $key = null): static
@@ -407,8 +405,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Determine if the collection is empty.
-     *
-     * @return bool
      */
     public function isEmpty(): bool
     {
@@ -417,8 +413,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Determine if the collection is not empty.
-     *
-     * @return bool
      */
     public function isNotEmpty(): bool
     {
@@ -428,7 +422,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Output or return memory usage stats related to the current collection.
      *
-     * @param bool $asString
      * @return string|array<string, mixed>
      */
     public function withMemoryUsage(bool $asString = true): string|array
@@ -506,9 +499,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Build a key resolver from various input types.
-     *
-     * @param mixed $key
-     * @return callable
      */
     protected function buildKeyResolver(mixed $key): callable
     {
@@ -521,10 +511,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Read a key from an item. Works on arrays, objects, and ArrayAccess.
-     *
-     * @param mixed $item
-     * @param string|int $key
-     * @return mixed
      */
     public function valueFrom(mixed $item, string|int $key): mixed
     {
@@ -550,11 +536,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Read a single key from an item.
-     *
-     * @param mixed $item
-     * @param string|int $key
-     * @param bool $found
-     * @return mixed
      */
     private function readKey(mixed $item, string|int $key, bool &$found = false): mixed
     {
@@ -615,8 +596,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Sort the collection by a given key or callback, or by several of them.
      *
      * @param (callable(TValue, TKey): mixed)|string|array<int, mixed> $callback
-     * @param int $options
-     * @param bool $descending
      * @return static<TKey, TValue>
      */
     public function sortBy(callable|string|array $callback, int $options = SORT_REGULAR, bool $descending = false): static
@@ -650,8 +629,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Sort by several criteria; each is a key, a callback, or [key, 'asc'|'desc'].
      *
      * @param array<int, mixed> $criteria
-     * @param int $options
-     * @param bool $descending
      * @return static<TKey, TValue>
      */
     protected function sortByMany(array $criteria, int $options, bool $descending): static
@@ -696,11 +673,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Compare two values according to the given sort flags.
-     *
-     * @param mixed $a
-     * @param mixed $b
-     * @param int $options
-     * @return int
      */
     protected function compareValues(mixed $a, mixed $b, int $options): int
     {
@@ -719,7 +691,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Sort the collection in descending order by a given key or callback.
      *
      * @param (callable(TValue, TKey): mixed)|string $callback
-     * @param int $options
      * @return static<TKey, TValue>
      */
     public function sortByDesc(callable|string $callback, int $options = SORT_REGULAR): static
@@ -771,9 +742,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Convert the collection to JSON.
-     *
-     * @param int $options
-     * @return string
      */
     public function toJson(int $options = 0): string
     {
@@ -783,7 +751,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Take the first or last {$limit} items from the collection.
      *
-     * @param int $limit
      * @return static<TKey, TValue>
      */
     public function take(int $limit): static
@@ -798,7 +765,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Take the last {$limit} items from the collection.
      *
-     * @param int $limit
      * @return static<TKey, TValue>
      */
     public function takeLast(int $limit): static
@@ -849,8 +815,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * The type of the items, as the parent collection reports it.
-     *
-     * @return string
      */
     public function getType(): string
     {
@@ -878,8 +842,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Get the model class name associated to this collection.
-     *
-     * @return string|null
      */
     public function getModel(): ?string
     {
@@ -889,7 +851,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Split collection into chunks of given size.
      *
-     * @param int $size
      * @return static<int, array<TKey, TValue>>
      */
     public function chunk(int $size): static
@@ -932,7 +893,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get items not present in the given items.
      *
-     * @param mixed $items
      * @return static<TKey, TValue>
      */
     public function diff(mixed $items): static
@@ -952,7 +912,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get items present in both this collection and given items.
      *
-     * @param mixed $items
      * @return static<TKey, TValue>
      */
     public function intersect(mixed $items): static
@@ -997,7 +956,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Find duplicate items in the collection.
      *
-     * @param string|null $key
      * @return static<TKey, TValue>
      */
     public function duplicates(?string $key = null): static
@@ -1023,7 +981,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Get the sum of values.
      *
      * @param (callable(TValue, TKey): (int|float))|string|null $callback
-     * @return int|float
      */
     public function sum(callable|string|null $callback = null): int|float
     {
@@ -1042,7 +999,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Get the average (mean) value.
      *
      * @param (callable(TValue, TKey): (int|float))|string|null $callback
-     * @return int|float|null
      */
     public function avg(callable|string|null $callback = null): int|float|null
     {
@@ -1059,7 +1015,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Get the minimum value.
      *
      * @param (callable(TValue, TKey): mixed)|string|null $callback
-     * @return mixed
      */
     public function min(callable|string|null $callback = null): mixed
     {
@@ -1082,7 +1037,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Get the maximum value.
      *
      * @param (callable(TValue, TKey): mixed)|string|null $callback
-     * @return mixed
      */
     public function max(callable|string|null $callback = null): mixed
     {
@@ -1121,6 +1075,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
             throw new \RuntimeException("Multiple items found ({$count} items), expected exactly one");
         }
 
+        /** @var TValue */
         return $filtered->first();
     }
 
@@ -1139,7 +1094,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Determine whether every item passes the test. True for an empty collection.
      *
      * @param callable(TValue, TKey): bool $callback
-     * @return bool
      */
     public function every(callable $callback): bool
     {
@@ -1156,7 +1110,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
      * Determine whether at least one item passes the test. False for an empty collection.
      *
      * @param callable(TValue, TKey): bool $callback
-     * @return bool
      */
     public function some(callable $callback): bool
     {
@@ -1214,10 +1167,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get the first item whose value for a key matches.
      *
-     * @param string $key
-     * @param mixed $operator
-     * @param mixed $value
-     * @return mixed
+     * @return TValue|null
      */
     public function firstWhere(string $key, mixed $operator = null, mixed $value = null): mixed
     {
@@ -1236,11 +1186,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Compare a retrieved value against an expected value using an operator.
-     *
-     * @param mixed $retrieved
-     * @param string $operator
-     * @param mixed $value
-     * @return bool
      */
     protected function compareWith(mixed $retrieved, string $operator, mixed $value): bool
     {
@@ -1260,9 +1205,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Keep the items whose value for a key is one of the given values.
      *
-     * @param string $key
      * @param iterable<mixed> $values
-     * @param bool $strict
      * @return static<TKey, TValue>
      */
     public function whereIn(string $key, iterable $values, bool $strict = false): static
@@ -1275,9 +1218,7 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Keep the items whose value for a key is none of the given values.
      *
-     * @param string $key
      * @param iterable<mixed> $values
-     * @param bool $strict
      * @return static<TKey, TValue>
      */
     public function whereNotIn(string $key, iterable $values, bool $strict = false): static
@@ -1290,7 +1231,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Keep the items that have a value (not null) for a key.
      *
-     * @param string $key
      * @return static<TKey, TValue>
      */
     public function whereNotNull(string $key): static
@@ -1301,7 +1241,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Keep the items that have no value (null) for a key.
      *
-     * @param string $key
      * @return static<TKey, TValue>
      */
     public function whereNull(string $key): static
@@ -1331,10 +1270,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Join the items into a string, or one key of each item.
-     *
-     * @param string $glue
-     * @param string|null $key
-     * @return string
      */
     public function implode(string $glue, ?string $key = null): string
     {
@@ -1368,7 +1303,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Skip the first items.
      *
-     * @param int $count
      * @return static<TKey, TValue>
      */
     public function skip(int $count): static
@@ -1379,8 +1313,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Get a part of the collection.
      *
-     * @param int $offset
-     * @param int|null $length
      * @return static<TKey, TValue>
      */
     public function slice(int $offset, ?int $length = null): static
@@ -1401,10 +1333,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * Find the key of a value, or of the first item that passes a test.
-     *
-     * @param mixed $value
-     * @param bool $strict
-     * @return int|string|false
      */
     public function search(mixed $value, bool $strict = false): int|string|false
     {
@@ -1421,9 +1349,6 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
 
     /**
      * The middle value. Items that are null are ignored.
-     *
-     * @param string|null $key
-     * @return int|float|null
      */
     public function median(?string $key = null): int|float|null
     {
@@ -1445,10 +1370,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Run a callback when the value is truthy.
      *
-     * @param mixed $value
-     * @param callable($this, mixed): mixed $callback
-     * @param (callable($this, mixed): mixed)|null $default
-     * @return static|mixed
+     * @template TWhen
+     * @template TWhenDefault
+     * @param callable($this, mixed): TWhen $callback
+     * @param (callable($this, mixed): TWhenDefault)|null $default
+     * @return TWhen|TWhenDefault|$this
      */
     public function when(mixed $value, callable $callback, ?callable $default = null): mixed
     {
@@ -1464,10 +1390,11 @@ class Collection extends RamseyCollection implements IteratorAggregate, ArrayAcc
     /**
      * Run a callback when the value is falsy.
      *
-     * @param mixed $value
-     * @param callable($this, mixed): mixed $callback
-     * @param (callable($this, mixed): mixed)|null $default
-     * @return static|mixed
+     * @template TUnless
+     * @template TUnlessDefault
+     * @param callable($this, mixed): TUnless $callback
+     * @param (callable($this, mixed): TUnlessDefault)|null $default
+     * @return TUnless|TUnlessDefault|$this
      */
     public function unless(mixed $value, callable $callback, ?callable $default = null): mixed
     {
