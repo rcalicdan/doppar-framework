@@ -2,61 +2,49 @@
 
 namespace Phaseolies\Translation;
 
-use Phaseolies\Translation\FileLoader;
-
 class Translator extends FileLoader
 {
     /**
      * The file loader instance responsible for loading translation files.
-     *
-     * @var FileLoader
      */
-    protected $loader;
+    protected FileLoader $loader;
 
     /**
      * The current locale being used for translations.
-     *
-     * @var string
      */
-    protected $locale;
+    protected string $locale;
 
     /**
      * The fallback locale to use when a translation isn't found.
-     *
-     * @var string
      */
-    protected $fallback;
+    protected string $fallback;
 
     /**
      * Array of loaded translation lines grouped by namespace, group, and locale.
      *
-     * @var array
+     * @var array<string, array<string, array<string, mixed>>>
      */
-    protected $loaded = [];
+    protected array $loaded = [];
 
     /**
      * Create a new translator instance.
-     *
-     * @param FileLoader $loader
-     * @param string $locale
      */
-    public function __construct(FileLoader $loader, $locale)
+    public function __construct(FileLoader $loader, string $locale)
     {
+        parent::__construct($loader->path);
+
         $this->loader = $loader;
         $this->locale = $locale;
-        $this->fallback = config('app.fallback_locale', 'en');
+        $this->fallback = (string) config('app.fallback_locale', 'en');
     }
 
     /**
      * Get the translation for the given key.
-     * Alias for the get() method.
      *
-     * @param string $key
-     * @param array $replace
-     * @param string|null $locale
-     * @return string
+     * @param array<string, mixed> $replace
+     * @return string|array<string, mixed>
      */
-    public function trans($key, array $replace = [], $locale = null)
+    public function trans(string $key, array $replace = [], ?string $locale = null): string|array
     {
         return $this->get($key, $replace, $locale);
     }
@@ -64,27 +52,25 @@ class Translator extends FileLoader
     /**
      * Get the translation for the given key.
      *
-     * @param string $key
-     * @param array $replace
-     * @param string|null $locale
-     * @return string
+     * @param array<string, mixed> $replace
+     * @return string|array<string, mixed>
      */
-    public function get($key, array $replace = [], $locale = null)
+    public function get(string $key, array $replace = [], ?string $locale = null): string|array
     {
         [$namespace, $group, $item] = $this->parseKey($key);
 
-        $locale = $locale ?: $this->locale;
+        $targetLocale = $locale ?: $this->locale;
 
         if ($group === '*') {
             return $key;
         }
 
-        $this->loadTranslations($namespace, $group, $locale);
+        $this->loadTranslations($namespace, $group, $targetLocale);
 
         $line = $this->getLine(
             $namespace,
             $group,
-            $locale,
+            $targetLocale,
             $item,
             $replace
         );
@@ -93,7 +79,7 @@ class Translator extends FileLoader
             return $line;
         }
 
-        if ($this->fallback && $locale !== $this->fallback) {
+        if ($this->fallback && $targetLocale !== $this->fallback) {
             return $this->get($key, $replace, $this->fallback);
         }
 
@@ -103,12 +89,10 @@ class Translator extends FileLoader
     /**
      * Parse a key into namespace, group, and item.
      *
-     * @param string $key
-     * @return array [namespace, group, item]
+     * @return array{0: string|null, 1: string|null, 2: string}
      */
-    protected function parseKey($key)
+    protected function parseKey(string $key): array
     {
-        // Handle package translations (namespace::group.item)
         if (strpos($key, '::') !== false) {
             $segments = explode('::', $key, 2);
             $namespace = $segments[0];
@@ -122,23 +106,20 @@ class Translator extends FileLoader
             return [$namespace, '*', $rest];
         }
 
-        // Handle regular translations (group.item)
         if (strpos($key, '.') !== false) {
             list($group, $item) = explode('.', $key, 2);
             return [null, $group, $item];
         }
 
-        // Fallback for simple keys
         return [null, '*', $key];
     }
 
     /**
      * Parse a namespaced key into components.
      *
-     * @param string $key
-     * @return array [namespace, group, item]
+     * @return array{0: string|null, 1: string|null, 2: string}
      */
-    protected function parseNamespacedKey($key)
+    protected function parseNamespacedKey(string $key): array
     {
         $segments = explode('::', $key);
 
@@ -159,14 +140,10 @@ class Translator extends FileLoader
     /**
      * Get a translation line from the loaded translations.
      *
-     * @param string|null $namespace
-     * @param string|null $group
-     * @param string $locale
-     * @param string $item
-     * @param array $replace
-     * @return string|array|null
+     * @param array<string, mixed> $replace
+     * @return string|array<string, mixed>|null
      */
-    protected function getLine($namespace, $group, $locale, $item, array $replace)
+    protected function getLine(?string $namespace, ?string $group, string $locale, string $item, array $replace): string|array|null
     {
         $this->loadTranslations($namespace, $group, $locale);
 
@@ -196,16 +173,15 @@ class Translator extends FileLoader
     /**
      * Make the place-holder replacements on a translation line.
      *
-     * @param string $line
-     * @param array $replace
-     * @return string
+     * @param array<string, mixed> $replace
      */
-    public function makeReplacements($line, array $replace)
+    public function makeReplacements(string $line, array $replace): string
     {
         foreach ($replace as $key => $value) {
+            $valStr = (string) $value;
             $line = str_replace(
                 [':' . $key, ':' . strtoupper($key), ':' . ucfirst($key)],
-                [$value, strtoupper($value), ucfirst($value)],
+                [$valStr, strtoupper($valStr), ucfirst($valStr)],
                 $line
             );
         }
@@ -215,19 +191,14 @@ class Translator extends FileLoader
 
     /**
      * Load the specified language group.
-     *
-     * @param string|null $namespace
-     * @param string|null $group
-     * @param string $locale
-     * @return void
      */
-    public function loadTranslations($namespace, $group, $locale)
+    public function loadTranslations(?string $namespace, ?string $group, string $locale): void
     {
         if ($this->isLoaded($namespace, $group, $locale)) {
             return;
         }
 
-        $lines = $this->loader->load($locale, $group, $namespace);
+        $lines = $this->loader->load($locale, $group ?? '*', $namespace);
 
         $namespaceKey = $namespace ?? '';
         $groupKey = $group ?? '';
@@ -237,13 +208,8 @@ class Translator extends FileLoader
 
     /**
      * Determine if the given group has been loaded.
-     *
-     * @param string|null $namespace
-     * @param string|null $group
-     * @param string $locale
-     * @return bool
      */
-    protected function isLoaded($namespace, $group, $locale)
+    protected function isLoaded(?string $namespace, ?string $group, string $locale): bool
     {
         $namespaceKey = $namespace ?? '';
         $groupKey = $group ?? '';
@@ -253,42 +219,32 @@ class Translator extends FileLoader
 
     /**
      * Set the current locale.
-     *
-     * @param string $locale
-     * @return void
      */
-    public function setLocale($locale)
+    public function setLocale(string $locale): void
     {
         $this->locale = $locale;
     }
 
     /**
      * Get the current locale.
-     *
-     * @return string
      */
-    public function getLocale()
+    public function getLocale(): string
     {
         return $this->locale;
     }
 
     /**
      * Set the fallback locale.
-     *
-     * @param string $fallback
-     * @return void
      */
-    public function setFallback($fallback)
+    public function setFallback(string $fallback): void
     {
         $this->fallback = $fallback;
     }
 
     /**
      * Get the fallback locale.
-     *
-     * @return string
      */
-    public function getFallback()
+    public function getFallback(): string
     {
         return $this->fallback;
     }

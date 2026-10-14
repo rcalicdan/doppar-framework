@@ -13,9 +13,6 @@ final class MessageResolver
 
     /**
      * Resolves a constraint violation into a translated message.
-     *
-     * @param ConstraintViolation $violation
-     * @return string
      */
     public function resolve(ConstraintViolation $violation): string
     {
@@ -26,18 +23,21 @@ final class MessageResolver
         );
         $attributeKey = "validation.attributes.{$violation->property}";
 
-        if ($attribute === $attributeKey) {
+        if ($attribute === $attributeKey || !is_string($attribute)) {
             $attribute = ucwords(str_replace('_', ' ', $violation->property));
         }
 
         $key = "validation.{$violation->messageKey}";
+
+        /** @var array<string, string> $replacements */
         $replacements = array_merge([
             ':attribute' => $attribute,
             'attribute' => $attribute,
         ], $violation->parameters);
+
         $message = $this->translator->get($key, $replacements);
 
-        if ($message !== $key) {
+        if (is_string($message) && $message !== $key) {
             return $message;
         }
 

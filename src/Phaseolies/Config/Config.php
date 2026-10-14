@@ -42,14 +42,14 @@ final class Config
     protected static array $fileHashes = [];
 
     /**
-     * Cached list of config file paths
+     * Cached list of config file paths.
      *
-     * @var array|null
+     * @var array<int, string>|null
      */
     protected static ?array $configFiles = null;
 
     /**
-     * A snapshot of `$config` exactly as it stood right after boot
+     * A snapshot of `$config` exactly as it stood right after boot.
      *
      * @var array<string, mixed>
      */
@@ -70,7 +70,7 @@ final class Config
     }
 
     /**
-     * Undo any runtime mutation made by `set()` since boot
+     * Undo any runtime mutation made by `set()` since boot.
      *
      * @return void
      */
@@ -82,7 +82,7 @@ final class Config
     /**
      * Get all config file paths, cached for the request lifetime.
      *
-     * @return array
+     * @return array<int, string>
      */
     protected static function getConfigFiles(): array
     {
@@ -140,13 +140,16 @@ final class Config
      */
     public static function loadFromCache(): void
     {
-        if (!file_exists(self::$cacheFile)) {
+        self::initialize();
+
+        $cacheFile = self::$cacheFile;
+        if ($cacheFile === null || !file_exists($cacheFile)) {
             self::$loadedFromCache = false;
             self::loadAll();
             return;
         }
 
-        $cached = include self::$cacheFile;
+        $cached = include $cacheFile;
 
         if (
             !isset($cached['_meta']['cache_key']) ||
@@ -177,7 +180,13 @@ final class Config
             return;
         }
 
-        $cacheDir = dirname(self::$cacheFile);
+        self::initialize();
+        $cacheFile = self::$cacheFile;
+        if ($cacheFile === null) {
+            return;
+        }
+
+        $cacheDir = dirname($cacheFile);
         if (!is_dir($cacheDir) && !mkdir($cacheDir, 0755, true) && !is_dir($cacheDir)) {
             throw new RuntimeException("Failed to create cache directory: {$cacheDir}");
         }
@@ -196,9 +205,9 @@ final class Config
             'data' => self::$config,
         ];
 
-        $tempFile = self::$cacheFile . '.tmp.' . getmypid();
+        $tempFile = $cacheFile . '.tmp.' . getmypid();
         file_put_contents($tempFile, '<?php return ' . var_export($cacheContent, true) . ';', LOCK_EX);
-        rename($tempFile, self::$cacheFile);
+        rename($tempFile, $cacheFile);
 
         self::$loadedFromCache = true;
         self::$configModified = false;
@@ -310,7 +319,7 @@ final class Config
      */
     public static function isCacheValid(): bool
     {
-        if (!file_exists(self::$cacheFile)) {
+        if (self::$cacheFile === null || !file_exists(self::$cacheFile)) {
             return false;
         }
 

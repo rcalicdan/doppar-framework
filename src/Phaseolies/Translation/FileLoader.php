@@ -8,31 +8,25 @@ class FileLoader
 {
     /**
      * The File instance used for file operations.
-     *
-     * @var File
      */
-    protected $file;
+    protected File $file;
 
     /**
      * The base path for translation files.
-     *
-     * @var string
      */
-    protected $path;
+    protected string $path;
 
     /**
      * Array of namespace hints for package translations.
      *
-     * @var array
+     * @var array<string, string>
      */
-    protected $hints = [];
+    protected array $hints = [];
 
     /**
      * Create a new file loader instance.
-     *
-     * @param string $path
      */
-    public function __construct($path)
+    public function __construct(string $path)
     {
         $this->file = new File($path, false);
         $this->path = $path;
@@ -41,40 +35,30 @@ class FileLoader
     /**
      * Load the messages for the given locale, group, and namespace.
      *
-     * @param string $locale
-     * @param string $group
-     * @param string|null $namespace
-     * @return array
+     * @return array<string, mixed>
      */
-    public function load($locale, $group, $namespace = null)
+    public function load(string $locale, string $group, ?string $namespace = null): array
     {
         try {
-            $lines = $this->loadPath($this->path, $locale, $group);
-            return $lines;
+            return $this->loadPath($this->path, $locale, $group);
         } catch (\RuntimeException $e) {
-            // If not found in main app, try package locations
             if ($namespace) {
-                // Try registered package path first
                 if (isset($this->hints[$namespace])) {
                     try {
                         return $this->loadPath($this->hints[$namespace], $locale, $group);
-                    } catch (\RuntimeException $e) {
-                        // Continue to try vendor path
+                    } catch (\RuntimeException) {
                     }
                 }
 
-                // Try published vendor path
                 $vendorPath = $this->path . '/vendor/' . $namespace;
                 if (file_exists($vendorPath)) {
                     try {
                         return $this->loadPath($vendorPath, $locale, $group);
-                    } catch (\RuntimeException $e) {
-                        // Continue to throw original exception
+                    } catch (\RuntimeException) {
                     }
                 }
             }
 
-            // If all fails, rethrow the original exception
             throw $e;
         }
     }
@@ -82,14 +66,11 @@ class FileLoader
     /**
      * Load a translation file from the given path.
      *
-     * @param string $path
-     * @param string $locale
-     * @param string $group
-     * @return array
+     * @return array<string, mixed>
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
      */
-    protected function loadPath($path, $locale, $group)
+    protected function loadPath(string $path, string $locale, string $group): array
     {
         if (empty($group)) {
             throw new \InvalidArgumentException('Translation group name cannot be empty');
@@ -107,13 +88,10 @@ class FileLoader
     /**
      * Load any namespace override files and merge them with the base translations.
      *
-     * @param array $lines
-     * @param string $locale
-     * @param string $group
-     * @param string $namespace
-     * @return array
+     * @param array<string, mixed> $lines
+     * @return array<string, mixed>
      */
-    protected function loadNamespaceOverrides(array $lines, $locale, $group, $namespace)
+    protected function loadNamespaceOverrides(array $lines, string $locale, string $group, string $namespace): array
     {
         $file = "{$this->path}/vendor/{$namespace}/{$locale}/{$group}.php";
 
@@ -126,13 +104,8 @@ class FileLoader
 
     /**
      * Add a namespace hint to the loader.
-     * Used to register package translation locations.
-     *
-     * @param string $namespace
-     * @param string $hint
-     * @return void
      */
-    public function addNamespace($namespace, $hint)
+    public function addNamespace(string $namespace, string $hint): void
     {
         $this->hints[$namespace] = $hint;
     }
@@ -140,9 +113,9 @@ class FileLoader
     /**
      * Get all registered namespace hints.
      *
-     * @return array
+     * @return array<string, string>
      */
-    public function namespaces()
+    public function namespaces(): array
     {
         return $this->hints;
     }

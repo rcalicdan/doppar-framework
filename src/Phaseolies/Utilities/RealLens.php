@@ -9,12 +9,9 @@ class RealLens implements Lensable
     /**
      * Retrieve an item from an array using "dot" notation.
      *
-     * @param array $array
-     * @param string|int|null $key
-     * @param mixed $default
-     * @return mixed
+     * @param array<string|int, mixed> $array
      */
-    public function grab(array $array, string|int|null $key, $default = null)
+    public function grab(array $array, string|int|null $key, mixed $default = null): mixed
     {
         if ($key === null) return $array;
 
@@ -34,11 +31,9 @@ class RealLens implements Lensable
     /**
      * Set an array item to a given value using "dot" notation.
      *
-     * @param array $array
-     * @param string $key
-     * @param mixed $value
+     * @param array<string|int, mixed> $array
      */
-    public function put(array &$array, string $key, $value)
+    public function put(array &$array, string $key, mixed $value): void
     {
         $keys = explode('.', $key);
         $ref = &$array;
@@ -56,9 +51,8 @@ class RealLens implements Lensable
     /**
      * Check if one or more items exist in an array using "dot" notation.
      *
-     * @param array $array
-     * @param string|array $keys
-     * @return bool
+     * @param array<string|int, mixed> $array
+     * @param string|array<int, string> $keys
      */
     public function got(array $array, string|array $keys): bool
     {
@@ -78,9 +72,8 @@ class RealLens implements Lensable
     /**
      * Check if at least one of the given items exists in an array using "dot" notation.
      *
-     * @param array $array
-     * @param string|array $keys
-     * @return bool
+     * @param array<string|int, mixed> $array
+     * @param string|array<int, string> $keys
      */
     public function some(array $array, string|array $keys): bool
     {
@@ -94,10 +87,10 @@ class RealLens implements Lensable
     /**
      * Remove one or more array items from a given array using "dot" notation.
      *
-     * @param array $array
-     * @param string|array $keys
+     * @param array<string|int, mixed> $array
+     * @param string|array<int, string> $keys
      */
-    public function zap(array &$array, string|array $keys)
+    public function zap(array &$array, string|array $keys): void
     {
         foreach ((array) $keys as $key) {
             $segments = explode('.', $key);
@@ -118,20 +111,20 @@ class RealLens implements Lensable
     /**
      * Pluck an array of values from an array of arrays or objects.
      *
-     * @param array $array
-     * @param string $value
-     * @param string|null $key
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @return array<string|int, mixed>
      */
     public function pick(array $array, string $value, ?string $key = null): array
     {
         $results = [];
 
         foreach ($array as $item) {
-            $val = $this->grab($item, $value);
+            $val = is_array($item) ? $this->grab($item, $value) : ($item->{$value} ?? null);
             if ($key !== null) {
-                $k = $this->grab($item, $key);
-                $results[$k] = $val;
+                $k = is_array($item) ? $this->grab($item, $key) : ($item->{$key} ?? null);
+                if ($k !== null && (is_string($k) || is_int($k))) {
+                    $results[$k] = $val;
+                }
             } else {
                 $results[] = $val;
             }
@@ -143,9 +136,8 @@ class RealLens implements Lensable
     /**
      * Flatten a multi-dimensional array into a single level.
      *
-     * @param array $array
-     * @param int $depth
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @return array<int, mixed>
      */
     public function flat(array $array, int $depth = \PHP_INT_MAX): array
     {
@@ -171,12 +163,9 @@ class RealLens implements Lensable
     /**
      * Get the first element of an array, optionally filtered by a callback.
      *
-     * @param array $array
-     * @param callable|null $callback
-     * @param mixed $default
-     * @return mixed
+     * @param array<string|int, mixed> $array
      */
-    public function head(array $array, ?callable $callback = null, $default = null)
+    public function head(array $array, ?callable $callback = null, mixed $default = null): mixed
     {
         if ($callback === null) {
             return reset($array) ?: $default;
@@ -192,12 +181,9 @@ class RealLens implements Lensable
     /**
      * Get the last element of an array, optionally filtered by a callback.
      *
-     * @param array $array
-     * @param callable|null $callback
-     * @param mixed $default
-     * @return mixed
+     * @param array<string|int, mixed> $array
      */
-    public function tail(array $array, ?callable $callback = null, $default = null)
+    public function tail(array $array, ?callable $callback = null, mixed $default = null): mixed
     {
         if ($callback === null) {
             return empty($array) ? $default : end($array);
@@ -213,8 +199,8 @@ class RealLens implements Lensable
     /**
      * Flatten a multi-dimensional array into a single level (shallow flatten).
      *
-     * @param array $array
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @return array<int, mixed>
      */
     public function squash(array $array): array
     {
@@ -234,9 +220,9 @@ class RealLens implements Lensable
     /**
      * Return only the specified keys from the array.
      *
-     * @param array $array
-     * @param array $keys
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @param array<int, string|int> $keys
+     * @return array<string|int, mixed>
      */
     public function keep(array $array, array $keys): array
     {
@@ -254,9 +240,9 @@ class RealLens implements Lensable
     /**
      * Remove the specified keys from the array.
      *
-     * @param array $array
-     * @param array $keys
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @param array<int, string|int> $keys
+     * @return array<string|int, mixed>
      */
     public function drop(array $array, array $keys): array
     {
@@ -270,8 +256,7 @@ class RealLens implements Lensable
     /**
      * Determine if the array is associative (non-sequential).
      *
-     * @param array $array
-     * @return bool
+     * @param array<string|int, mixed> $array
      */
     public function assoc(array $array): bool
     {
@@ -283,9 +268,8 @@ class RealLens implements Lensable
     /**
      * Filter the array using the given callback.
      *
-     * @param array $array
-     * @param callable $callback
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @return array<string|int, mixed>
      */
     public function whr(array $array, callable $callback): array
     {
@@ -303,10 +287,9 @@ class RealLens implements Lensable
     /**
      * If the given value is not an array, wrap it in one.
      *
-     * @param mixed $value
-     * @return array
+     * @return array<int, mixed>
      */
-    public function wrap($value): array
+    public function wrap(mixed $value): array
     {
         if (is_null($value)) return [];
 
@@ -316,9 +299,8 @@ class RealLens implements Lensable
     /**
      * Flatten a multi-dimensional associative array with dots.
      *
-     * @param array $array
-     * @param string $prepend
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @return array<string, mixed>
      */
     public function dot(array $array, string $prepend = ''): array
     {
@@ -340,8 +322,8 @@ class RealLens implements Lensable
     /**
      * Convert a flattened "dot" notation array into an expanded array.
      *
-     * @param array $array
-     * @return array
+     * @param array<string, mixed> $array
+     * @return array<string|int, mixed>
      */
     public function undot(array $array): array
     {
@@ -357,8 +339,8 @@ class RealLens implements Lensable
     /**
      * Randomly shuffle the values of the given array.
      *
-     * @param array $array
-     * @return array
+     * @param array<string|int, mixed> $array
+     * @return array<int, mixed>
      */
     public function rand(array $array): array
     {
