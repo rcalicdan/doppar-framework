@@ -5,12 +5,15 @@ namespace Phaseolies\DI;
 use ArrayAccess;
 use Phaseolies\DI\Attributes\Immutable;
 
+/**
+ * @implements ArrayAccess<string, mixed>
+ */
 class Container implements ArrayAccess
 {
     /**
      * Array to hold service definitions.
      *
-     * @var array<string, mixed>
+     * @var array<string, array{concrete: mixed, singleton: bool}>
      */
     private array $bindings = [];
 
@@ -36,15 +39,14 @@ class Container implements ArrayAccess
     private static ?self $instance = null;
 
     /**
-     * The set of binding keys that existed the moment boot finished — see
-     * {@see snapshotBootBindings()}.
+     * The set of binding keys that existed the moment boot finished.
      *
      * @var array<string, true>
      */
     private array $bootBindingKeys = [];
 
     /**
-     * Whether {@see snapshotBootBindings()} has run yet.
+     * Whether snapshotBootBindings() has run yet.
      *
      * @var bool
      */
@@ -71,9 +73,9 @@ class Container implements ArrayAccess
      * @param mixed $offset
      * @return bool
      */
-    public function offsetExists($offset): bool
+    public function offsetExists(mixed $offset): bool
     {
-        return $this->has($offset);
+        return $this->has((string) $offset);
     }
 
     /**
@@ -82,9 +84,9 @@ class Container implements ArrayAccess
      * @param mixed $offset
      * @return mixed
      */
-    public function offsetGet($offset): mixed
+    public function offsetGet(mixed $offset): mixed
     {
-        return $this->get($offset);
+        return $this->get((string) $offset);
     }
 
     /**
@@ -94,9 +96,9 @@ class Container implements ArrayAccess
      * @param mixed $value
      * @return void
      */
-    public function offsetSet($offset, $value): void
+    public function offsetSet(mixed $offset, mixed $value): void
     {
-        $this->bind($offset, $value);
+        $this->bind((string) $offset, $value);
     }
 
     /**
@@ -105,7 +107,7 @@ class Container implements ArrayAccess
      * @param mixed $offset
      * @return void
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset(mixed $offset): void
     {
         unset($this->bindings[$offset], $this->instances[$offset]);
     }
@@ -167,9 +169,9 @@ class Container implements ArrayAccess
      * Resolve a service from the container.
      *
      * @template T of object
-     * @param class-string<T> $abstract
-     * @param array $parameters
-     * @return T
+     * @param class-string<T>|string $abstract
+     * @param array<string, mixed> $parameters
+     * @return ($abstract is class-string<T> ? T : mixed)
      * @throws \RuntimeException
      */
     public function get(string $abstract, array $parameters = []): mixed
@@ -189,7 +191,7 @@ class Container implements ArrayAccess
         $this->resolving[$abstract] = true;
 
         try {
-            if (isset($this->instances[$abstract]) && $this->instances[$abstract] !== null) {
+            if (isset($this->instances[$abstract])) {
                 return $this->instances[$abstract];
             }
 
@@ -226,8 +228,8 @@ class Container implements ArrayAccess
      * Resolve a binding from the container.
      *
      * @param string $abstract
-     * @param array $binding
-     * @param array $parameters
+     * @param array{concrete: mixed, singleton: bool} $binding
+     * @param array<string, mixed> $parameters
      * @return mixed
      */
     private function resolveBinding(string $abstract, array $binding, array $parameters): mixed
@@ -249,9 +251,9 @@ class Container implements ArrayAccess
      * Resolve a class with its dependencies (alias for get)
      *
      * @template T of object
-     * @param class-string<T> $abstract
-     * @param array $parameters
-     * @return T
+     * @param class-string<T>|string $abstract
+     * @param array<string, mixed> $parameters
+     * @return ($abstract is class-string<T> ? T : mixed)
      */
     public function make(string $abstract, array $parameters = []): mixed
     {
@@ -263,7 +265,7 @@ class Container implements ArrayAccess
      *
      * @template T of object
      * @param class-string<T> $concrete
-     * @param array $parameters
+     * @param array<string, mixed> $parameters
      * @return T
      * @throws \RuntimeException
      */
@@ -300,7 +302,7 @@ class Container implements ArrayAccess
     /**
      * Freeze the instance if the class has the #[Immutable] attribute and uses the EnforcesImmutability trait.
      *
-     * @param \ReflectionClass $reflector
+     * @param \ReflectionClass<object> $reflector
      * @param object $instance
      * @return void
      */
@@ -318,9 +320,9 @@ class Container implements ArrayAccess
      * Resolve constructor dependencies
      *
      * @param \ReflectionParameter[] $parameters
-     * @param array $primitives
+     * @param array<string, mixed> $primitives
      * @param string $className
-     * @return array
+     * @return array<int, mixed>
      */
     protected function resolveDependencies(array $parameters, array $primitives = [], string $className = ''): array
     {
@@ -338,7 +340,7 @@ class Container implements ArrayAccess
      * Resolve a single dependency
      *
      * @param \ReflectionParameter $parameter
-     * @param array $primitives
+     * @param array<string, mixed> $primitives
      * @param string $className
      * @return mixed
      */
@@ -353,7 +355,7 @@ class Container implements ArrayAccess
         }
 
         // Handle class or interface dependencies
-        if ($paramType && !$paramType->isBuiltin()) {
+        if ($paramType instanceof \ReflectionNamedType && !$paramType->isBuiltin()) {
             $typeName = $paramType->getName();
 
             // If it's nullable and not bound, return null
@@ -379,9 +381,11 @@ class Container implements ArrayAccess
             return array_shift($primitives);
         }
 
+        $declaringClass = $parameter->getDeclaringClass();
+
         throw new \RuntimeException(
             "Unresolvable dependency resolving [{$parameter}] in class " .
-                ($className ?: $parameter->getDeclaringClass()->getName())
+                ($className ?: ($declaringClass ? $declaringClass->getName() : 'unknown'))
         );
     }
 
@@ -419,7 +423,7 @@ class Container implements ArrayAccess
      */
     public function hasInstance(string $key): bool
     {
-        return isset($this->instances[$key]) && $this->instances[$key] !== null;
+        return isset($this->instances[$key]);
     }
 
     /**
@@ -435,7 +439,6 @@ class Container implements ArrayAccess
 
     /**
      * Freeze the current set of binding keys as "boot-time".
-     * {@see forgetRequestScopedInstances()}, which sweeps exactly this set.
      *
      * @return void
      */
@@ -450,8 +453,7 @@ class Container implements ArrayAccess
     }
 
     /**
-     * Forget the resolved instance of every singleton bound *after* boot
-     * finished
+     * Forget the resolved instance of every singleton bound *after* boot finished
      *
      * @return void
      */
@@ -485,7 +487,7 @@ class Container implements ArrayAccess
     /**
      * Get all bindings.
      *
-     * @return array
+     * @return array<string, array{concrete: mixed, singleton: bool}>
      */
     public function getBindings(): array
     {
@@ -495,7 +497,7 @@ class Container implements ArrayAccess
     /**
      * Get all instances.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function getInstances(): array
     {
@@ -510,7 +512,7 @@ class Container implements ArrayAccess
     public static function getInstance(): self
     {
         if (is_null(self::$instance)) {
-            self::$instance = new static();
+            self::$instance = new self();
         }
 
         return self::$instance;
@@ -584,8 +586,7 @@ class Container implements ArrayAccess
 
         foreach (array_keys($overrides) as $abstract) {
             $saved[$abstract] = [
-                'binding' => array_key_exists($abstract, $this->bindings) ? $this->bindings[$abstract] : null,
-                'hasBinding' => array_key_exists($abstract, $this->bindings),
+                'binding' => $this->bindings[$abstract] ?? null,
                 'instance' => $this->instances[$abstract] ?? null,
                 'hasInstance' => array_key_exists($abstract, $this->instances),
             ];
@@ -607,7 +608,7 @@ class Container implements ArrayAccess
             foreach ($saved as $abstract => $state) {
                 unset($this->bindings[$abstract], $this->instances[$abstract]);
 
-                if ($state['hasBinding']) {
+                if ($state['binding'] !== null) {
                     $this->bindings[$abstract] = $state['binding'];
                 }
 
@@ -637,42 +638,39 @@ class Container implements ArrayAccess
      * Call the given callback with dependency injection
      *
      * @param callable $callback
-     * @param array $parameters
+     * @param array<string, mixed> $parameters
      * @return mixed
      */
     public function call(callable $callback, array $parameters = []): mixed
     {
-        if (!is_callable($callback)) {
-            throw new \TypeError(sprintf(
-                'Callback must be callable, %s given',
-                is_object($callback) ? get_class($callback) : gettype($callback)
-            ));
-        }
-
         if (is_array($callback)) {
             $reflection = new \ReflectionMethod($callback[0], $callback[1]);
+            $context = $callback[0];
         } elseif (is_object($callback) && method_exists($callback, '__invoke')) {
             $reflection = new \ReflectionMethod($callback, '__invoke');
+            $context = $callback;
         } else {
+            assert($callback instanceof \Closure || is_string($callback));
             $reflection = new \ReflectionFunction($callback);
+            $context = null;
         }
 
         $dependencies = $this->resolveDependenciesWithAttributes(
             $reflection->getParameters(),
             $parameters,
-            is_array($callback) ? $callback[0] : null
+            $context
         );
 
-        return call_user_func_array($callback, $dependencies);
+        return $callback(...$dependencies);
     }
 
     /**
      * Resolve dependencies with attribute support
      *
-     * @param array $parameters
-     * @param array $primitives
+     * @param \ReflectionParameter[] $parameters
+     * @param array<string, mixed> $primitives
      * @param object|string|null $context
-     * @return array
+     * @return array<int, mixed>
      */
     protected function resolveDependenciesWithAttributes(array $parameters, array $primitives = [], $context = null): array
     {
@@ -685,7 +683,7 @@ class Container implements ArrayAccess
                 $bindAttribute = $bindAttributes[0]->newInstance();
                 $paramType = $parameter->getType();
 
-                if (!$paramType || $paramType->isBuiltin()) {
+                if (!$paramType instanceof \ReflectionNamedType || $paramType->isBuiltin()) {
                     throw new \RuntimeException(
                         "Parameter '\${$parameter->getName()}' must be class-typed when using #[Bind]"
                     );
@@ -724,7 +722,7 @@ class Container implements ArrayAccess
     /**
      * Get all registered aliases
      *
-     * @return array
+     * @return array<string, array{concrete: mixed, singleton: bool}>
      */
     public function getAliases(): array
     {
@@ -739,8 +737,8 @@ class Container implements ArrayAccess
      *
      * @param string $class
      * @param string $method
-     * @param array $parameters
-     * @return array
+     * @param array<string, mixed> $parameters
+     * @return array<int, mixed>
      */
     public function resolveMethodDependencies(string $class, string $method, array $parameters = []): array
     {
@@ -763,13 +761,17 @@ class Container implements ArrayAccess
     /**
      * Register a service provider
      *
-     * @param mixed $provider
+     * @param object|class-string $provider
      * @return void
      */
-    public function register($provider): void
+    public function register(object|string $provider): void
     {
         if (is_string($provider) && class_exists($provider)) {
             $provider = $this->make($provider);
+        }
+
+        if (!is_object($provider)) {
+            return;
         }
 
         if (method_exists($provider, 'register')) {
@@ -799,9 +801,6 @@ class Container implements ArrayAccess
      */
     public function resolved(string $abstract): bool
     {
-        return $this->hasInstance($abstract) ||
-            (isset($this->bindings[$abstract]) &&
-                $this->bindings[$abstract]['singleton'] &&
-                $this->hasInstance($abstract));
+        return $this->hasInstance($abstract);
     }
 }

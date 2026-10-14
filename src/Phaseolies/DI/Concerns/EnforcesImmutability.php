@@ -4,12 +4,15 @@ namespace Phaseolies\DI\Concerns;
 
 use Phaseolies\DI\Exceptions\ImmutableViolationException;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait EnforcesImmutability
 {
     /**
      * Holds all public property values after they are unset on freeze()
      *
-     * @var array
+     * @var array<string, mixed>
      */
     private array $__immutableProperties = [];
 
