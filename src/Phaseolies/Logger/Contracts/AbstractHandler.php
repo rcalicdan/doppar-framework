@@ -11,12 +11,8 @@ abstract class AbstractHandler
 {
     /**
      * Configures the Monolog handler for logging.
-     *
-     * @param Logger $logger
-     * @param string $channel
-     * @return void
      */
-    public function handleConfiguration(Logger $logger, ?string $logFile = null): void
+    public function handleConfiguration(Logger $logger, string $logFile): void
     {
         $streamHandler = new StreamHandler($logFile, Level::Debug);
         $formatter = new LineFormatter(

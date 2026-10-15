@@ -10,23 +10,18 @@ class LogService implements ResettableInterface
 {
     /**
      * The Monolog logger instance.
-     *
-     * @var Logger
      */
     protected Logger $logger;
 
     /**
      * Array of log handlers.
      *
-     * @var LogHandlerInterface[]
+     * @var array<int, LogHandlerInterface>
      */
     protected array $handlers = [];
 
     /**
      * Adds a log handler.
-     *
-     * @param LogHandlerInterface $handler
-     * @return void
      */
     public function addHandler(LogHandlerInterface $handler): void
     {
@@ -35,13 +30,10 @@ class LogService implements ResettableInterface
 
     /**
      * Configures and returns a Monolog logger instance with specific handlers.
-     *
-     * @param string|null $channel
-     * @return Logger
      */
     public function getLogger(?string $channel = null): Logger
     {
-        $channel = $channel ?? env('LOG_CHANNEL', 'stack');
+        $channel ??= (is_string($envChannel = env('LOG_CHANNEL')) && $envChannel !== '' ? $envChannel : 'stack');
 
         $this->logger = new Logger($channel);
 
@@ -54,8 +46,6 @@ class LogService implements ResettableInterface
 
     /**
      * Resets the logger state by clearing all handlers.
-     *
-     * @return void
      */
     public function reset(): void
     {

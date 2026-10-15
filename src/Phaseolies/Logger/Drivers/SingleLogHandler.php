@@ -10,10 +10,6 @@ class SingleLogHandler extends AbstractHandler implements LogHandlerInterface
 {
     /**
      * Configures the Monolog handler for default logging.
-     *
-     * @param Logger $logger
-     * @param string $channel
-     * @return void
      */
     public function configureHandler(Logger $logger, string $channel): void
     {

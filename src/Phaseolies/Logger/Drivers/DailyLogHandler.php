@@ -10,10 +10,6 @@ class DailyLogHandler extends AbstractHandler implements LogHandlerInterface
 {
     /**
      * Configures the Monolog handler for daily logging.
-     *
-     * @param Logger $logger
-     * @param string $channel
-     * @return void
      */
     public function configureHandler(Logger $logger, string $channel): void
     {

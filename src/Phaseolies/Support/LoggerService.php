@@ -14,16 +14,11 @@ class LoggerService extends LogService
 {
     /**
      * The current logging channel.
-     *
-     * @var string
      */
     protected ?string $currentChannel = null;
 
     /**
      * Sets the logging channel.
-     *
-     * @param string $channel
-     * @return self
      */
     public function channel(string $channel): self
     {
@@ -43,131 +38,115 @@ class LoggerService extends LogService
     /**
      * Logs an informational message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function info(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->info($message, $context);
+        $this->reader()->info($formatted, $context);
     }
 
     /**
      * Logs a notice message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function notice(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->notice($message, $context);
+        $this->reader()->notice($formatted, $context);
     }
 
     /**
      * Logs a warning message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function warning(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->warning($message, $context);
+        $this->reader()->warning($formatted, $context);
     }
 
     /**
      * Logs an error message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function error(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->error($message, $context);
+        $this->reader()->error($formatted, $context);
     }
 
     /**
      * Logs a debug message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function debug(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->debug($message, $context);
+        $this->reader()->debug($formatted, $context);
     }
 
     /**
      * Logs a critical message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function critical(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->critical($message, $context);
+        $this->reader()->critical($formatted, $context);
     }
 
     /**
      * Logs an alert message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function alert(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->alert($message, $context);
+        $this->reader()->alert($formatted, $context);
     }
 
     /**
      * Logs an emergency message.
      *
-     * @param mixed $message
-     * @param array $context
-     * @return void
+     * @param array<string, mixed> $context
      */
     public function emergency(mixed $message, array $context = []): void
     {
-        $message = $this->formatMessage($message);
+        $formatted = $this->formatMessage($message);
 
-        $this->reader()->emergency($message, $context);
+        $this->reader()->emergency($formatted, $context);
     }
 
     /**
      * Overrides reader to pass the dynamic channel.
-     *
-     * @return Logger
      */
     protected function reader(): Logger
     {
         $channel = $this->currentChannel;
 
         if ($channel === null) {
-            match (env('LOG_CHANNEL', 'stack')) {
+            $configured = is_string($envChannel = env('LOG_CHANNEL')) && $envChannel !== '' ? $envChannel : 'stack';
+
+            match ($configured) {
                 'daily' => $this->addHandler(new DailyLogHandler()),
                 'stack' => $this->addHandler(new DefaultLogHandler()),
                 'slack' => $this->addHandler(new SlackLogHandler()),
                 'single' => $this->addHandler(new SingleLogHandler()),
-                default => throw new UnsupportedLogDriverException("Unsupported log channel: $channel"),
+                default => throw new UnsupportedLogDriverException("Unsupported log channel: {$configured}"),
             };
         }
 
@@ -178,10 +157,7 @@ class LoggerService extends LogService
     }
 
     /**
-     * Format the log message
-     *
-     * @param mixed $message
-     * @return mixed
+     * Format the log message.
      */
     private function formatMessage(mixed $message): mixed
     {

@@ -12,25 +12,21 @@ class SlackLogHandler extends AbstractHandler implements LogHandlerInterface
 {
     /**
      * Configures the Monolog handler for Slack logging.
-     *
-     * @param Logger $logger
-     * @param string $channel
-     * @return void
      */
     public function configureHandler(Logger $logger, string $channel): void
     {
         $webhookUrl = env('SLACK_WEBHOOK_URL');
 
-        if (empty($webhookUrl)) {
+        if (!is_string($webhookUrl) || trim($webhookUrl) === '') {
             throw new \RuntimeException('Slack webhook URL is not configured.');
         }
 
         $slackHandler = new SlackWebhookHandler(
             $webhookUrl,
             null,
-            config('logging.channels.slack.username', 'Doppar Log'),
+            (string) config('logging.channels.slack.username', 'Doppar Log'),
             true,
-            config('logging.channels.slack.emoji', ':robot_face:'),
+            (string) config('logging.channels.slack.emoji', ':robot_face:'),
             false,
             true,
             Logger::DEBUG
