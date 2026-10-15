@@ -6,35 +6,29 @@ class RawExpression
 {
     /**
      * The raw SQL expression string.
-     *
-     * @var string
      */
     protected string $value;
 
     /**
      * The parameter bindings for the raw expression.
      *
-     * @var array
+     * @var array<int|string, mixed>
      */
     protected array $bindings = [];
 
     /**
      * Create a new raw SQL expression instance.
      *
-     * @param string $value
-     * @param array $bindings
+     * @param array<int|string, mixed> $bindings
      */
     public function __construct(string $value, array $bindings = [])
     {
         $this->value = $value;
-
         $this->bindings = $bindings;
     }
 
     /**
      * Get the raw SQL expression value.
-     *
-     * @return string
      */
     public function getValue(): string
     {
@@ -44,7 +38,7 @@ class RawExpression
     /**
      * Get the parameter bindings for the expression.
      *
-     * @return array
+     * @return array<int|string, mixed>
      */
     public function getBindings(): array
     {
@@ -53,8 +47,6 @@ class RawExpression
 
     /**
      * Convert the expression to its string representation.
-     *
-     * @return string
      */
     public function __toString(): string
     {

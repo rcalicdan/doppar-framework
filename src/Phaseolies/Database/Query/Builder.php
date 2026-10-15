@@ -7,20 +7,11 @@ use Phaseolies\Database\Contracts\Driver\DriverInterface;
 
 class Builder
 {
-    /**
-     * @param string $table
-     * @param PDO $pdo
-     * @param DriverInterface|null $driver
-     */
-    public function __construct(protected string $table, protected PDO $pdo, protected ?DriverInterface $driver = null)
-    {
-    }
+    public function __construct(protected string $table, protected PDO $pdo, protected ?DriverInterface $driver = null) {}
 
     /**
-     * Truncate the table
+     * Truncate the table.
      *
-     * @param bool $resetAutoIncrement
-     * @return int
      * @throws \RuntimeException
      */
     public function truncate(bool $resetAutoIncrement = true): int
@@ -42,9 +33,7 @@ class Builder
     }
 
     /**
-     * Delete all records from the table
-     *
-     * @return int
+     * Delete all records from the table.
      */
     public function delete(): int
     {
@@ -55,9 +44,7 @@ class Builder
     }
 
     /**
-     * Drop table from database
-     *
-     * @return int
+     * Drop table from database.
      */
     public function drop(): int
     {
@@ -68,9 +55,7 @@ class Builder
     }
 
     /**
-     * Check if table exists
-     *
-     * @return bool
+     * Check if table exists.
      */
     protected function tableExists(): bool
     {
@@ -87,11 +72,9 @@ class Builder
     }
 
     /**
-     * Execute SQL statement
+     * Execute SQL statement.
      *
-     * @param string $sql
-     * @param array $params
-     * @return int
+     * @param array<array-key, mixed> $params
      */
     protected function execute(string $sql, array $params = []): int
     {
@@ -103,9 +86,7 @@ class Builder
     }
 
     /**
-     * Get the PDO instance
-     *
-     * @return PDO
+     * Get the PDO instance.
      */
     public function getPdo(): PDO
     {

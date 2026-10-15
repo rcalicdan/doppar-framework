@@ -9,10 +9,9 @@ use Phaseolies\Database\Contracts\Driver\DriverInterface;
 class MySQLDriver implements DriverInterface
 {
     /**
-     * Get the MySQL PDO Instance
+     * Get the MySQL PDO Instance.
      *
-     * @param array $config
-     * @return PDO
+     * @param array<string, mixed> $config
      */
     #[\Override]
     public function connect(array $config): PDO
@@ -68,40 +67,33 @@ class MySQLDriver implements DriverInterface
     }
 
     /**
-     * Get table list
+     * Get table list.
      *
-     * @param PDO $pdo
-     * @return array
+     * @return array<int, string>
      */
     #[\Override]
     public function getTables(PDO $pdo): array
     {
         $stmt = $pdo->query('SHOW TABLES');
 
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $stmt !== false ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
     }
 
     /**
-     * Get table columns
+     * Get table columns.
      *
-     * @param PDO $pdo
-     * @param string $table
-     * @return array
+     * @return array<int, string>
      */
     #[\Override]
     public function getTableColumns(PDO $pdo, string $table): array
     {
         $stmt = $pdo->query("DESCRIBE {$table}");
 
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $stmt !== false ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
     }
 
     /**
-     * Check whether a table exists or not
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @return bool
+     * Check whether a table exists or not.
      */
     #[\Override]
     public function tableExists(PDO $pdo, string $table): bool
@@ -115,13 +107,11 @@ class MySQLDriver implements DriverInterface
     }
 
     /**
-     * Call store procedure and get the results
+     * Call store procedure and get the results.
      *
-     * @param PDO $pdo
-     * @param string $name
-     * @param array $params
-     * @param array $outputParams
-     * @return array
+     * @param array<int|string, mixed> $params
+     * @param array<int|string, mixed> $outputParams
+     * @return array<int, array<int, array<string, mixed>>>
      */
     #[\Override]
     public function callProcedure(PDO $pdo, string $name, array $params = [], array &$outputParams = []): array
@@ -143,17 +133,16 @@ class MySQLDriver implements DriverInterface
 
         $results = [];
         do {
-            $results[] = $stmt->fetchAll();
+            /** @var array<int, array<string, mixed>> $rows */
+            $rows = $stmt->fetchAll();
+            $results[] = $rows;
         } while ($stmt->nextRowset());
 
         return $results;
     }
 
     /**
-     * Drop all the tables
-     *
-     * @param PDO $pdo
-     * @return int
+     * Drop all the tables.
      */
     #[\Override]
     public function dropAllTables(PDO $pdo): int
@@ -173,10 +162,7 @@ class MySQLDriver implements DriverInterface
     }
 
     /**
-     * Disable foreign key constraints for table
-     *
-     * @param PDO $pdo
-     * @return void
+     * Disable foreign key constraints for table.
      */
     #[\Override]
     public function disableForeignKeyConstraints(PDO $pdo): void
@@ -185,10 +171,7 @@ class MySQLDriver implements DriverInterface
     }
 
     /**
-     * Eisable foreign key constraints for table
-     *
-     * @param PDO $pdo
-     * @return void
+     * Enable foreign key constraints for table.
      */
     #[\Override]
     public function enableForeignKeyConstraints(PDO $pdo): void
@@ -197,12 +180,7 @@ class MySQLDriver implements DriverInterface
     }
 
     /**
-     * Truncate a given table
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @param bool $resetAutoIncrement
-     * @return int
+     * Truncate a given table.
      */
     #[\Override]
     public function truncate(PDO $pdo, string $table, bool $resetAutoIncrement = true): int
@@ -215,11 +193,7 @@ class MySQLDriver implements DriverInterface
     }
 
     /**
-     * Drop a given table
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @return int
+     * Drop a given table.
      */
     #[\Override]
     public function dropTable(PDO $pdo, string $table): int
@@ -228,11 +202,7 @@ class MySQLDriver implements DriverInterface
     }
 
     /**
-     * Delete all records from a given table
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @return int
+     * Delete all records from a given table.
      */
     #[\Override]
     public function deleteAll(PDO $pdo, string $table): int

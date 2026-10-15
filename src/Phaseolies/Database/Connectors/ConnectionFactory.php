@@ -14,8 +14,7 @@ class ConnectionFactory
     /**
      * Creates a PDO connection based on the provided configuration.
      *
-     * @param array $config
-     * @return PDO
+     * @param array<string, mixed> $config
      * @throws RuntimeException
      */
     public static function make(array $config): PDO
@@ -28,14 +27,13 @@ class ConnectionFactory
     /**
      * Resolve a database driver instance from configuration.
      *
-     * @param array $config
-     * @return DriverInterface
+     * @param array<string, mixed> $config
      */
     public static function createDriver(array $config): DriverInterface
     {
         $driver = $config['driver'] ?? 'mysql';
 
-        return match (strtolower($driver)) {
+        return match (strtolower((string) $driver)) {
             'mysql'  => new MySQLDriver(),
             'sqlite' => new SQLiteDriver(),
             'pgsql'  => new PostgreSQLDriver(),

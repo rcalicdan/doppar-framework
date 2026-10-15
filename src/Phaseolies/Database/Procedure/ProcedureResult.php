@@ -8,6 +8,9 @@ use ArrayIterator;
 use ArrayAccess;
 use JsonSerializable;
 
+/**
+ * @implements ArrayAccess<string, mixed>
+ */
 class ProcedureResult implements ArrayAccess, JsonSerializable
 {
     /**
@@ -15,28 +18,24 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
      * This is a multidimensional array where each element represents a result set,
      * which itself is an array of rows (associative arrays).
      *
-     * @var array
+     * @var array<int, array<int, array<string, mixed>>>
      */
-    protected $results = [];
+    protected array $results = [];
 
     /**
-     * Current result set being accessed
-     *
-     * @var int
+     * Current result set being accessed.
      */
-    protected $currentSet = 0;
+    protected int $currentSet = 0;
 
     /**
-     * Current row being accessed
-     *
-     * @var int
+     * Current row being accessed.
      */
-    protected $currentRow = 0;
+    protected int $currentRow = 0;
 
     /**
      * Initialize the ProcedureResult with an array of result sets.
      *
-     * @param array
+     * @param array<int, array<int, array<string, mixed>>> $results
      */
     public function __construct(array $results)
     {
@@ -45,72 +44,56 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
 
     /**
      * Determine if an offset exists in the current row of the current result set.
-     *
-     * @param mixed $offset
-     * @return bool
      */
-    public function offsetExists($offset): bool
+    public function offsetExists(mixed $offset): bool
     {
-        return isset($this->getCurrentData()[$offset]);
+        return isset($this->getCurrentData()[(string) $offset]);
     }
 
     /**
      * Retrieve a value by offset from the current row of the current result set.
-     *
-     * @param mixed $offset
-     * @return mixed|null
      */
-    public function offsetGet($offset): mixed
+    public function offsetGet(mixed $offset): mixed
     {
-        return $this->getCurrentData()[$offset] ?? null;
+        return $this->getCurrentData()[(string) $offset] ?? null;
     }
 
     /**
      * Set a value by offset on the current row of the current result set.
-     *
-     * @param mixed $offset
-     * @param mixed $value
-     * @return void
      */
-    public function offsetSet($offset, $value): void
+    public function offsetSet(mixed $offset, mixed $value): void
     {
         $currentData = &$this->getCurrentDataReference();
 
-        $currentData[$offset] = $value;
+        if ($offset === null) {
+            $currentData[] = $value;
+        } else {
+            $currentData[(string) $offset] = $value;
+        }
     }
 
     /**
      * Unset a value by offset on the current row of the current result set.
-     *
-     * @param mixed $offset
-     * @return void
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset(mixed $offset): void
     {
         $currentData = &$this->getCurrentDataReference();
 
-        unset($currentData[$offset]);
+        unset($currentData[(string) $offset]);
     }
 
     /**
      * Get a property from the current row.
-     *
-     * @param string $name
-     * @return mixed|null
      */
-    public function __get($name)
+    public function __get(string $name): mixed
     {
         return $this->getCurrentData()[$name] ?? null;
     }
 
     /**
      * Set a property on the current row.
-     *
-     * @param string $name
-     * @param mixed $value
-     * @return void
      */
-    public function __set($name, $value)
+    public function __set(string $name, mixed $value): void
     {
         $currentData = &$this->getCurrentDataReference();
 
@@ -119,22 +102,16 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
 
     /**
      * Check if a property is set on the current row.
-     *
-     * @param string $name
-     * @return bool
      */
-    public function __isset($name)
+    public function __isset(string $name): bool
     {
         return isset($this->getCurrentData()[$name]);
     }
 
     /**
      * Unset a property on the current row.
-     *
-     * @param string $name
-     * @return void
      */
-    public function __unset($name)
+    public function __unset(string $name): void
     {
         $currentData = &$this->getCurrentDataReference();
 
@@ -144,7 +121,7 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
     /**
      * Get an iterator for the current row's data.
      *
-     * @return Traversable
+     * @return Traversable<string, mixed>
      */
     public function getIterator(): Traversable
     {
@@ -153,8 +130,6 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
 
     /**
      * Specify data which should be serialized to JSON.
-     *
-     * @return mixed
      */
     public function jsonSerialize(): mixed
     {
@@ -164,7 +139,7 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
     /**
      * Retrieve all rows from the first result set.
      *
-     * @return Collection
+     * @return Collection<int, array<string, mixed>>
      */
     public function all(): Collection
     {
@@ -174,17 +149,19 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
     /**
      * Retrieve the first row from the first result set.
      *
-     * @return Collection|null
+     * @return Collection<string, mixed>|null
      */
     public function first(): ?Collection
     {
-        return new Collection('array', $this->results[0][0] ?? []);
+        $firstRow = $this->results[0][0] ?? null;
+
+        return $firstRow !== null ? new Collection('array', $firstRow) : null;
     }
 
     /**
      * Retrieve the last row from the first result set.
      *
-     * @return Collection|null
+     * @return Collection<string, mixed>|null
      */
     public function last(): ?Collection
     {
@@ -193,17 +170,15 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
         }
 
         $lastRow = end($this->results[0]);
-
         reset($this->results[0]);
 
-        return new Collection('array', $lastRow ?: []);
+        return $lastRow ? new Collection('array', $lastRow) : null;
     }
 
     /**
      * Retrieve the last row from a specified result set.
      *
-     * @param int $setIndex
-     * @return Collection|null
+     * @return Collection<string, mixed>|null
      */
     public function lastSet(int $setIndex): ?Collection
     {
@@ -214,13 +189,12 @@ class ProcedureResult implements ArrayAccess, JsonSerializable
         $lastRow = end($this->results[$setIndex]);
         reset($this->results[$setIndex]);
 
-        return new Collection('array', $lastRow ?: []);
+        return $lastRow ? new Collection('array', $lastRow) : null;
     }
 
     /**
      * Retrieve a specific result set by index.
      *
-     * @param int $index
      * @return array<int, array<string, mixed>>
      */
     public function resultSet(int $index): array

@@ -8,10 +8,9 @@ use Phaseolies\Database\Contracts\Driver\DriverInterface;
 class PostgreSQLDriver implements DriverInterface
 {
     /**
-     * Get the MySQL PDO Instance
+     * Get the PostgreSQL PDO Instance.
      *
-     * @param array $config
-     * @return PDO
+     * @param array<string, mixed> $config
      */
     #[\Override]
     public function connect(array $config): PDO
@@ -49,12 +48,10 @@ class PostgreSQLDriver implements DriverInterface
             $options
         );
 
-        // Set client encoding (charset) if specified
         if (!empty($config['charset'])) {
             $pdo->exec("SET NAMES '{$config['charset']}'");
         }
 
-        // Set search path
         $searchPath = $config['search_path'] ?? 'public';
         $pdo->exec("SET search_path TO {$searchPath}");
 
@@ -62,10 +59,9 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * Get table list
+     * Get table list.
      *
-     * @param PDO $pdo
-     * @return array
+     * @return array<int, string>
      */
     #[\Override]
     public function getTables(PDO $pdo): array
@@ -77,15 +73,13 @@ class PostgreSQLDriver implements DriverInterface
             AND table_type = 'BASE TABLE'
         ");
 
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $stmt !== false ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
     }
 
     /**
-     * Get table columns
+     * Get table columns.
      *
-     * @param PDO $pdo
-     * @param string $table
-     * @return array
+     * @return array<int, string>
      */
     #[\Override]
     public function getTableColumns(PDO $pdo, string $table): array
@@ -98,15 +92,11 @@ class PostgreSQLDriver implements DriverInterface
             ORDER BY ordinal_position
         ");
 
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $stmt !== false ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
     }
 
     /**
-     * Check whether a table exists or not
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @return bool
+     * Check whether a table exists or not.
      */
     #[\Override]
     public function tableExists(PDO $pdo, string $table): bool
@@ -128,13 +118,11 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * Call store procedure and get the results
+     * Call store procedure and get the results.
      *
-     * @param PDO $pdo
-     * @param string $name
-     * @param array $params
-     * @param array $outputParams
-     * @return array
+     * @param array<int|string, mixed> $params
+     * @param array<int|string, mixed> $outputParams
+     * @return array<int, array<int, array<string, mixed>>>
      */
     #[\Override]
     public function callProcedure(PDO $pdo, string $name, array $params = [], array &$outputParams = []): array
@@ -153,17 +141,16 @@ class PostgreSQLDriver implements DriverInterface
 
         $results = [];
         do {
-            $results[] = $stmt->fetchAll();
+            /** @var array<int, array<string, mixed>> $rows */
+            $rows = $stmt->fetchAll();
+            $results[] = $rows;
         } while ($stmt->nextRowset());
 
         return $results;
     }
 
     /**
-     * Drop all the tables
-     *
-     * @param PDO $pdo
-     * @return int
+     * Drop all the tables.
      */
     #[\Override]
     public function dropAllTables(PDO $pdo): int
@@ -183,10 +170,7 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * Disable foreign key constraints for table
-     *
-     * @param PDO $pdo
-     * @return void
+     * Disable foreign key constraints for table.
      */
     #[\Override]
     public function disableForeignKeyConstraints(PDO $pdo): void
@@ -195,10 +179,7 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * Eisable foreign key constraints for table
-     *
-     * @param PDO $pdo
-     * @return void
+     * Enable foreign key constraints for table.
      */
     #[\Override]
     public function enableForeignKeyConstraints(PDO $pdo): void
@@ -207,12 +188,7 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * Truncate a given table
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @param bool $resetAutoIncrement
-     * @return int
+     * Truncate a given table.
      */
     #[\Override]
     public function truncate(PDO $pdo, string $table, bool $resetAutoIncrement = true): int
@@ -224,11 +200,7 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * Drop a given table
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @return int
+     * Drop a given table.
      */
     #[\Override]
     public function dropTable(PDO $pdo, string $table): int
@@ -237,11 +209,7 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * Delete all records from a given table
-     *
-     * @param PDO $pdo
-     * @param string $table
-     * @return int
+     * Delete all records from a given table.
      */
     #[\Override]
     public function deleteAll(PDO $pdo, string $table): int
@@ -250,10 +218,9 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
-     * PostgreSQL-specific method to get sequences
+     * PostgreSQL-specific method to get sequences.
      *
-     * @param PDO $pdo
-     * @return array
+     * @return array<int, string>
      */
     public function getSequences(PDO $pdo): array
     {
@@ -262,16 +229,12 @@ class PostgreSQLDriver implements DriverInterface
             FROM information_schema.sequences
             WHERE sequence_schema = 'public'
         ");
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        return $stmt !== false ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
     }
 
     /**
-     * PostgreSQL-specific method to reset sequence
-     *
-     * @param PDO $pdo
-     * @param string $sequence
-     * @param int $value
-     * @return bool
+     * PostgreSQL-specific method to reset sequence.
      */
     public function resetSequence(PDO $pdo, string $sequence, int $value = 1): bool
     {
