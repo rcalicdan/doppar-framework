@@ -6,19 +6,13 @@ trait InteractsWithTimeframe
 {
     /**
      * Add a where date clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @param string $boolean
-     * @return self
      */
-    public function whereDate(string $column, $operator, ?string $value = null, string $boolean = 'AND'): self
+    public function whereDate(string $column, mixed $operator, ?string $value = null, string $boolean = 'AND'): self
     {
         $this->assertValidIdentifier($column);
 
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -34,17 +28,11 @@ trait InteractsWithTimeframe
 
     /**
      * Add an OR where date clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @param string $boolean
-     * @return self
      */
-    public function orWhereDate(string $column, $operator, ?string $value = null): self
+    public function orWhereDate(string $column, mixed $operator, ?string $value = null): self
     {
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -53,19 +41,13 @@ trait InteractsWithTimeframe
 
     /**
      * Add a where month clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @param string $boolean
-     * @return self
      */
-    public function whereMonth(string $column, $operator, ?string $value = null, string $boolean = 'AND'): self
+    public function whereMonth(string $column, mixed $operator, ?string $value = null, string $boolean = 'AND'): self
     {
         $this->assertValidIdentifier($column);
 
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -81,16 +63,11 @@ trait InteractsWithTimeframe
 
     /**
      * Add an OR where month clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @return self
      */
-    public function orWhereMonth(string $column, $operator, ?string $value = null): self
+    public function orWhereMonth(string $column, mixed $operator, ?string $value = null): self
     {
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -99,19 +76,13 @@ trait InteractsWithTimeframe
 
     /**
      * Add a where year clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @param string $boolean
-     * @return self
      */
-    public function whereYear(string $column, $operator, ?string $value = null, string $boolean = 'AND'): self
+    public function whereYear(string $column, mixed $operator, ?string $value = null, string $boolean = 'AND'): self
     {
         $this->assertValidIdentifier($column);
 
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -127,16 +98,11 @@ trait InteractsWithTimeframe
 
     /**
      * Add an OR where year clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @return self
      */
-    public function orWhereYear(string $column, $operator, ?string $value = null): self
+    public function orWhereYear(string $column, mixed $operator, ?string $value = null): self
     {
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -145,19 +111,13 @@ trait InteractsWithTimeframe
 
     /**
      * Add a where day clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @param string $boolean
-     * @return self
      */
-    public function whereDay(string $column, $operator, ?string $value = null, string $boolean = 'AND'): self
+    public function whereDay(string $column, mixed $operator, ?string $value = null, string $boolean = 'AND'): self
     {
         $this->assertValidIdentifier($column);
 
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -173,16 +133,11 @@ trait InteractsWithTimeframe
 
     /**
      * Add an OR where day clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @return self
      */
-    public function orWhereDay(string $column, $operator, ?string $value = null): self
+    public function orWhereDay(string $column, mixed $operator, ?string $value = null): self
     {
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -191,19 +146,13 @@ trait InteractsWithTimeframe
 
     /**
      * Add a where time clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @param string $boolean
-     * @return self
      */
-    public function whereTime(string $column, $operator, ?string $value = null, string $boolean = 'AND'): self
+    public function whereTime(string $column, mixed $operator, ?string $value = null, string $boolean = 'AND'): self
     {
         $this->assertValidIdentifier($column);
 
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -219,16 +168,11 @@ trait InteractsWithTimeframe
 
     /**
      * Add an OR where time clause to the query.
-     *
-     * @param string $column
-     * @param mixed $operator
-     * @param string|null $value
-     * @return self
      */
-    public function orWhereTime(string $column, $operator, ?string $value = null): self
+    public function orWhereTime(string $column, mixed $operator, ?string $value = null): self
     {
         if (func_num_args() === 2) {
-            $value = $operator;
+            $value = (string) $operator;
             $operator = '=';
         }
 
@@ -237,9 +181,6 @@ trait InteractsWithTimeframe
 
     /**
      * Filter records for today's date.
-     *
-     * @param string $column
-     * @return self
      */
     public function whereToday(string $column): self
     {
@@ -248,9 +189,6 @@ trait InteractsWithTimeframe
 
     /**
      * Filter records for yesterday's date.
-     *
-     * @param string $column
-     * @return self
      */
     public function whereYesterday(string $column): self
     {
@@ -259,9 +197,6 @@ trait InteractsWithTimeframe
 
     /**
      * Filter records for yesterday's date with OR condition.
-     *
-     * @param string $column
-     * @return self
      */
     public function orWhereYesterday(string $column): self
     {
@@ -270,57 +205,40 @@ trait InteractsWithTimeframe
 
     /**
      * Filter records for this month.
-     *
-     * @param string $column
-     * @return self
      */
     public function whereThisMonth(string $column): self
     {
-        return $this->whereMonth($column, now()->month);
+        return $this->whereMonth($column, (string) now()->month);
     }
 
     /**
      * Filter records for last month.
-     *
-     * @param string $column
-     * @return self
      */
     public function whereLastMonth(string $column): self
     {
-        return $this->whereMonth($column, now()->subMonth()->month);
+        return $this->whereMonth($column, (string) now()->subMonth()->month);
     }
 
     /**
      * Filter records for this year.
-     *
-     * @param string $column
-     * @return self
      */
     public function whereThisYear(string $column): self
     {
-        return $this->whereYear($column, now()->year);
+        return $this->whereYear($column, (string) now()->year);
     }
 
     /**
      * Filter records for last year.
-     *
-     * @param string $column
-     * @return self
      */
     public function whereLastYear(string $column): self
     {
-        return $this->whereYear($column, now()->subYear()->year);
+        return $this->whereYear($column, (string) now()->subYear()->year);
     }
 
     /**
-     * Add a where date between condition (date only, excludes time)
-     *
-     * @param string $column
-     * @param mixed $start
-     * @param mixed $end
-     * @return self
+     * Add a where date between condition (date only, excludes time).
      */
-    public function whereDateBetween(string $column, $start, $end): self
+    public function whereDateBetween(string $column, mixed $start, mixed $end): self
     {
         $this->assertValidIdentifier($column);
 
@@ -340,28 +258,20 @@ trait InteractsWithTimeframe
     }
 
     /**
-     * Add a where datetime between condition (includes time)
-     *
-     * @param string $column
-     * @param mixed $start
-     * @param mixed $end
-     * @return self
+     * Add a where datetime between condition (includes time).
      */
-    public function whereDateTimeBetween(string $column, $start, $end): self
+    public function whereDateTimeBetween(string $column, mixed $start, mixed $end): self
     {
-        $start = $this->formatDateTime($start, true);
-        $end = $this->formatDateTime($end, true);
+        $start = $this->formatDateTime($start, 'start');
+        $end = $this->formatDateTime($end, 'end');
 
         return $this->whereBetween($column, [$start, $end]);
     }
 
     /**
-     * Format date for database comparison
-     *
-     * @param mixed $date
-     * @return string
+     * Format date for database comparison.
      */
-    public function formatDate($date): string
+    public function formatDate(mixed $date): string
     {
         if ($date instanceof \DateTimeInterface) {
             return $date->format('Y-m-d');
@@ -375,25 +285,21 @@ trait InteractsWithTimeframe
     }
 
     /**
-     * Format datetime for database comparison with proper time handling
+     * Format datetime for database comparison with proper time handling.
      *
-     * @param mixed $date
      * @param string $type 'start' or 'end' to indicate how to handle missing time
-     * @return string
      */
-    public function formatDateTime($date, string $type = 'start'): string
+    public function formatDateTime(mixed $date, string $type = 'start'): string
     {
         if ($date instanceof \DateTimeInterface) {
             return $date->format('Y-m-d H:i:s');
         }
 
         if (is_string($date)) {
-            // If it's already a full datetime string, return as-is
             if (strlen($date) > 10 && str_contains($date, ' ')) {
                 return $date;
             }
 
-            // If it's just a date string, add appropriate time
             if (strlen($date) === 10) {
                 return $type === 'start' 
                     ? $date . ' 00:00:00'

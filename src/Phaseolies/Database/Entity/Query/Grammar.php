@@ -5,17 +5,13 @@ namespace Phaseolies\Database\Entity\Query;
 trait Grammar
 {
     /**
-     * Matches a plain column name or a table-qualified column name
-     *
-     * @var string
+     * Matches a plain column name or a table-qualified column name.
      */
-    private const VALID_IDENTIFIER_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/';
+    private const string VALID_IDENTIFIER_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/';
 
     /**
-     * Ensure a value used as a column identifier is a safe
+     * Ensure a value used as a column identifier is safe.
      *
-     * @param string $identifier
-     * @return void
      * @throws \InvalidArgumentException
      */
     protected function assertValidIdentifier(string $identifier): void
@@ -30,12 +26,6 @@ trait Grammar
 
     /**
      * Determine if a value is a callback (closure, invokable or array callable).
-     *
-     * Strings are never treated as callbacks: names like "date" or "time"
-     * pass is_callable() but are column names or values here.
-     *
-     * @param mixed $value
-     * @return bool
      */
     protected function isCallback(mixed $value): bool
     {
@@ -43,35 +33,26 @@ trait Grammar
     }
 
     /**
-     * Get the current driver
-     *
-     * @return string
+     * Get the current driver.
      */
     public function getDriver(): string
     {
-        return $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        return (string) $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
     }
 
     /**
-     * Get the random function as per driver
-     *
-     * @return string
+     * Get the random function as per driver.
      */
     public function rand(): string
     {
-        $randomFunction = match ($this->getDriver()) {
+        return match ($this->getDriver()) {
             'sqlite', 'pgsql' => 'RANDOM()',
             default           => 'RAND()',
         };
-
-        return $randomFunction;
     }
 
     /**
-     * Get the SQL query to retrieve table column information
-     *
-     * @param string $tableName
-     * @return string
+     * Get the SQL query to retrieve table column information.
      */
     public function getTableColumnsSql(string $tableName): string
     {
@@ -83,10 +64,10 @@ trait Grammar
     }
 
     /**
-     * Process the result to extract column names based on driver
+     * Process the result to extract column names based on driver.
      *
-     * @param array $result
-     * @return array
+     * @param array<int, array<string, mixed>> $result
+     * @return array<int, string>
      */
     public function processTableColumnsResult(array $result): array
     {
@@ -99,25 +80,20 @@ trait Grammar
     }
 
     /**
-     * Process MySQL DESCRIBE result to extract column names
+     * Process MySQL DESCRIBE result to extract column names.
      *
-     * @param array $result
-     * @return array
+     * @param array<int, array<string, mixed>> $result
+     * @return array<int, string>
      */
     protected function processMysqlTableColumns(array $result): array
     {
         $columns = [];
         foreach ($result as $row) {
-            // MySQL DESCRIBE returns column name in 'Field' key
-            if (isset($row['Field'])) {
+            if (isset($row['Field']) && is_string($row['Field'])) {
                 $columns[] = $row['Field'];
-            }
-            // Fallback for different MySQL drivers
-            elseif (isset($row['field'])) {
+            } elseif (isset($row['field']) && is_string($row['field'])) {
                 $columns[] = $row['field'];
-            }
-            // Ultimate fallback - try to get first element
-            elseif (!empty($row) && is_array($row)) {
+            } elseif (!empty($row) && is_array($row)) {
                 $firstValue = reset($row);
                 if (is_string($firstValue)) {
                     $columns[] = $firstValue;
@@ -129,9 +105,7 @@ trait Grammar
     }
 
     /**
-     * Get the SQL to list tables for the current database driver
-     *
-     * @return string
+     * Get the SQL to list tables for the current database driver.
      */
     public function getTablesSql(): string
     {
@@ -144,13 +118,11 @@ trait Grammar
     }
 
     /**
-     * Get JSON contains expression for the current database driver
+     * Get JSON contains expression for the current database driver.
      *
-     * @param string $column
-     * @param string $path
-     * @return array [sql_expression, bindings]
+     * @return array{0: string, 1: array<int, mixed>}
      */
-    public function jsonContains(string $column, string $path, $value): array
+    public function jsonContains(string $column, string $path, mixed $value): array
     {
         return match ($this->getDriver()) {
             'mysql' => $this->mysqlJsonContains($column, $path, $value),
@@ -161,14 +133,11 @@ trait Grammar
     }
 
     /**
-     * MySQL JSON_CONTAINS implementation
+     * MySQL JSON_CONTAINS implementation.
      *
-     * @param string $column
-     * @param string $path
-     * @param mixed $value
-     * @return array
+     * @return array{0: string, 1: array<int, mixed>}
      */
-    protected function mysqlJsonContains(string $column, string $path, $value): array
+    protected function mysqlJsonContains(string $column, string $path, mixed $value): array
     {
         $jsonValue = is_bool($value)
             ? ($value ? 'true' : 'false')
@@ -181,28 +150,21 @@ trait Grammar
     }
 
     /**
-     * PostgreSQL JSON contains implementation
+     * PostgreSQL JSON contains implementation.
      *
-     * @param string $column
-     * @param string $path
-     * @param mixed $value
-     * @return array
+     * @return array{0: string, 1: array<int, mixed>}
      */
-    protected function pgsqlJsonContains(string $column, string $path, $value): array
+    protected function pgsqlJsonContains(string $column, string $path, mixed $value): array
     {
-        // Convert JSON path to PostgreSQL JSON path format
         $cleanPath = str_replace('$.', '', $path);
         $pathParts = explode('.', $cleanPath);
 
-        // Build the JSON path access using -> and ->> operators
         $jsonAccess = $column . "::jsonb";
 
-        // Build the path access chain
         foreach ($pathParts as $part) {
             $jsonAccess .= " -> '{$part}'";
         }
 
-        // For the final access, use ->> to get text or -> for boolean
         if (is_bool($value)) {
             $finalAccess = "({$jsonAccess})::boolean = ?";
             return [$finalAccess, [$value]];
@@ -216,29 +178,23 @@ trait Grammar
     }
 
     /**
-     * SQLite JSON contains implementation
-     *
-     * @param string $column
-     * @param string $path
-     * @param mixed $value
-     * @return array
+     * SQLite JSON contains implementation.
+     * 
+     * @return array{0: string, 1: array<int, mixed>}
      */
-    protected function sqliteJsonContains(string $column, string $path, $value): array
+    protected function sqliteJsonContains(string $column, string $path, mixed $value): array
     {
         if (is_bool($value)) {
-            // For boolean values, compare directly
             return [
                 "json_extract({$column}, ?) = ?",
                 [$path, $value ? 1 : 0]
             ];
         } elseif (is_string($value)) {
-            // For string values, don't JSON encode - use the raw string
             return [
                 "json_extract({$column}, ?) = ?",
                 [$path, $value]
             ];
         } else {
-            // For other values (numbers, null), use as-is
             return [
                 "json_extract({$column}, ?) = ?",
                 [$path, $value]
@@ -247,23 +203,17 @@ trait Grammar
     }
 
     /**
-     * Extract the last segment from JSON path
-     *
-     * @param string $path
-     * @return string
+     * Extract the last segment from JSON path.
      */
     protected function getLastPathSegment(string $path): string
     {
         $parts = explode('.', $path);
 
-        return end($parts);
+        return (string) end($parts);
     }
 
     /**
      * Get the month extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function month(string $column): string
     {
@@ -277,9 +227,6 @@ trait Grammar
 
     /**
      * Get the year extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function year(string $column): string
     {
@@ -293,9 +240,6 @@ trait Grammar
 
     /**
      * Get the day extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function day(string $column): string
     {
@@ -309,10 +253,6 @@ trait Grammar
 
     /**
      * Get the date part extraction function for the current database driver
-     *
-     * @param string $column
-     * @param string $part
-     * @return string
      */
     public function datePart(string $column, string $part): string
     {
@@ -346,9 +286,6 @@ trait Grammar
 
     /**
      * Get the time extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function time(string $column): string
     {
@@ -362,9 +299,6 @@ trait Grammar
 
     /**
      * Get the hour extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function hour(string $column): string
     {
@@ -378,9 +312,6 @@ trait Grammar
 
     /**
      * Get the minute extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function minute(string $column): string
     {
@@ -394,9 +325,6 @@ trait Grammar
 
     /**
      * Get the second extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function second(string $column): string
     {
@@ -410,10 +338,6 @@ trait Grammar
 
     /**
      * Get the time part extraction function for the current database driver
-     *
-     * @param string $column
-     * @param string $part
-     * @return string
      */
     public function timePart(string $column, string $part): string
     {
@@ -443,15 +367,11 @@ trait Grammar
 
     /**
      * Get the date extraction function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function date(string $column): string
     {
         return match ($this->getDriver()) {
-            'mysql' => "DATE({$column})",
-            'pgsql' => "DATE({$column})",
+            'mysql', 'pgsql' => "DATE({$column})",
             'sqlite' => "date({$column})",
             default => "DATE({$column})",
         };
@@ -459,9 +379,6 @@ trait Grammar
 
     /**
      * Get the standard deviation function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function getStandardDeviation(string $column): string
     {
@@ -475,8 +392,6 @@ trait Grammar
     /**
      * Should standard deviation be computed in PHP instead of SQL
      * Only SQLite does not support SQRT function ATM
-     *
-     * @return bool
      */
     public function shouldComputeStdDevInPhp(): bool
     {
@@ -485,10 +400,6 @@ trait Grammar
 
     /**
      * Get the group concatenation expression for the current database driver
-     *
-     * @param string $column
-     * @param string $separator
-     * @return string
      */
     protected function getGroupConcatExpression(string $column, string $separator = ','): string
     {
@@ -502,9 +413,6 @@ trait Grammar
 
     /**
      * Get the variance function for the current database driver
-     *
-     * @param string $column
-     * @return string
      */
     public function getVarianceExpression(string $column): string
     {
@@ -516,15 +424,12 @@ trait Grammar
     }
 
     /**
-     * Generate an UPSERT (insert or update) SQL statement based on the current database driver.
+     * Generate an UPSERT (insert or update) SQL statement.
      *
-     * @param string $columnsStr
-     * @param array $placeholders
-     * @param array $updateStatements
-     * @param array $uniqueBy
-     * @param array $updateColumns
-     * @param bool $ignoreErrors
-     * @return string
+     * @param array<int, string> $placeholders
+     * @param array<int, string> $updateStatements
+     * @param array<int, string> $uniqueBy
+     * @param array<int, string> $updateColumns
      * @throws \RuntimeException
      */
     public function getUpsertSql(string $columnsStr, array $placeholders, array $updateStatements, array $uniqueBy, array $updateColumns, bool $ignoreErrors): string
@@ -545,21 +450,15 @@ trait Grammar
                         " ON CONFLICT({$uniqueColumns}) DO NOTHING";
                 }
 
-                // If updateStatements is provided, use it directly
                 if (!empty($updateStatements)) {
                     $updateClause = implode(', ', $updateStatements);
-                }
-                // If updateColumns is provided, build statements from it
-                elseif (!empty($updateColumns)) {
+                } elseif (!empty($updateColumns)) {
                     $updateStatements = array_map(
                         fn($col) => "\"{$col}\" = EXCLUDED.\"{$col}\"",
                         $updateColumns
                     );
                     $updateClause = implode(', ', $updateStatements);
-                }
-                // Fallback: update all columns except unique ones
-                else {
-                    // Get all table columns and exclude unique columns
+                } else {
                     $allColumns = $this->getTableColumns();
                     $columnsToUpdate = array_diff($allColumns, $uniqueBy);
 
@@ -608,8 +507,6 @@ trait Grammar
 
     /**
      * Check if SQLite version supports ON CONFLICT clause
-     *
-     * @return bool
      */
     protected function sqliteSupportsOnConflict(): bool
     {
@@ -618,7 +515,10 @@ trait Grammar
         }
 
         try {
-            $version = $this->pdo->query('SELECT sqlite_version()')->fetchColumn();
+            $stmt = $this->pdo->query('SELECT sqlite_version()');
+            if ($stmt === false) return false;
+            
+            $version = (string) $stmt->fetchColumn();
             return version_compare($version, '3.24.0', '>=');
         } catch (\Exception $e) {
             return false;
@@ -627,18 +527,11 @@ trait Grammar
 
     /**
      * Internal method to handle LIKE conditions with proper case handling for each driver.
-     *
-     * @param string $field
-     * @param string $value
-     * @param bool $caseSensitive
-     * @param string $boolean
-     * @return self
      */
     protected function addLikeCondition(string $field, string $value, bool $caseSensitive, string $boolean): self
     {
         $this->assertValidIdentifier($field);
 
-        // Intentionally avoiding $caseSensitive search
         $driver = $this->getDriver();
         $likeValue = $this->prepareLikeValue($value);
 
@@ -647,8 +540,6 @@ trait Grammar
                 $operator = 'ILIKE';
                 break;
             case 'mysql':
-                $operator = 'LIKE';
-                break;
             case 'sqlite':
             default:
                 $operator = 'LIKE';
@@ -661,9 +552,6 @@ trait Grammar
 
     /**
      * Prepare LIKE value by adding wildcards if needed
-     *
-     * @param string $value
-     * @return string
      */
     protected function prepareLikeValue(string $value): string
     {
@@ -676,17 +564,12 @@ trait Grammar
 
     /**
      * Check if a column is case-sensitive (MySQL specific)
-     *
-     * @param string $field
-     * @return bool
      */
     protected function isCaseSensitiveColumn(string $field): bool
     {
         try {
-            // Extract table and column names
             if (str_contains($field, '.')) {
                 [$table, $column] = explode('.', $field, 2);
-                // Remove backticks if present
                 $table = trim($table, '`');
                 $column = trim($column, '`');
             } else {
@@ -694,9 +577,7 @@ trait Grammar
                 $column = trim($field, '`');
             }
 
-            // Only MySQL supports this level of collation detection
             if ($this->getDriver() !== 'mysql') {
-                // Default to case-sensitive for other drivers
                 return true;
             }
 
@@ -709,7 +590,6 @@ trait Grammar
         ");
 
             if ($stmt === false) {
-                // Fallback if prepare fails
                 return true;
             }
 
@@ -717,9 +597,7 @@ trait Grammar
             $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if ($result && isset($result['COLLATION_NAME'])) {
-                $collation = $result['COLLATION_NAME'];
-
-                // _cs = case-sensitive, _ci = case-insensitive
+                $collation = (string) $result['COLLATION_NAME'];
                 return str_ends_with($collation, '_cs');
             }
 
@@ -731,9 +609,6 @@ trait Grammar
 
     /**
      * Convert LIKE pattern to SQLite GLOB pattern for case-sensitive search
-     *
-     * @param string $likePattern
-     * @return string
      */
     protected function convertLikeToGlob(string $likePattern): string
     {
@@ -745,9 +620,6 @@ trait Grammar
 
     /**
      * Quote identifier based on database driver
-     *
-     * @param string $identifier
-     * @return string
      */
     public function quoteIdentifier(string $identifier): string
     {

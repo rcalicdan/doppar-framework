@@ -7,9 +7,9 @@ use PDOStatement;
 trait InteractsWithConditionBinding
 {
     /**
-     * Build the WHERE clause SQL string for any query type
+     * Build the WHERE clause SQL string for any query type.
      *
-     * @return array [sql, bindings]
+     * @return array{0: string, 1: array<int, mixed>}
      */
     protected function buildWhereClause(): array
     {
@@ -22,7 +22,6 @@ trait InteractsWithConditionBinding
 
         foreach ($this->conditions as $condition) {
             if (isset($condition['type'])) {
-                // Handle special condition types
                 switch ($condition['type']) {
                     case 'RAW_WHERE':
                         $sqlParts[] = $condition['sql'];
@@ -44,7 +43,6 @@ trait InteractsWithConditionBinding
                         break;
                 }
             } else {
-                // Handle regular conditions
                 [$conditionSql, $conditionBindings] = $this->buildCondition($condition);
                 $sqlParts[] = $conditionSql;
                 $bindings = array_merge($bindings, $conditionBindings);
@@ -56,10 +54,10 @@ trait InteractsWithConditionBinding
     }
 
     /**
-     * Build a single condition into SQL and extract bindings
+     * Build a single condition into SQL and extract bindings.
      *
-     * @param array $condition
-     * @return array [sql, bindings]
+     * @param array<int|string, mixed> $condition
+     * @return array{0: string, 1: array<int, mixed>}
      */
     protected function buildCondition(array $condition): array
     {
@@ -72,7 +70,6 @@ trait InteractsWithConditionBinding
         $bindings = [];
         $sql = '';
 
-        // Handle different operator types
         switch ($operator) {
             case 'IS NULL':
             case 'IS NOT NULL':
@@ -88,12 +85,12 @@ trait InteractsWithConditionBinding
             case 'IN':
             case 'NOT IN':
                 if (empty($value)) {
-                    // Empty IN clause is always false, empty NOT IN always true
                     $sql = $operator === 'IN' ? "1=0" : "1=1";
                 } else {
-                    $placeholders = implode(',', array_fill(0, count($value), '?'));
+                    $valueArr = is_array($value) ? array_values($value) : [$value];
+                    $placeholders = implode(',', array_fill(0, count($valueArr), '?'));
                     $sql = "{$column} {$operator} ({$placeholders})";
-                    $bindings = $value;
+                    $bindings = $valueArr;
                 }
                 break;
 
@@ -107,10 +104,10 @@ trait InteractsWithConditionBinding
     }
 
     /**
-     * Format condition strings with boolean operators
+     * Format condition strings with boolean operators.
      *
-     * @param array $conditionStrings
-     * @return array
+     * @param array<int, string> $conditionStrings
+     * @return array<int, string>
      */
     protected function formatConditionStrings(array $conditionStrings): array
     {
@@ -131,7 +128,7 @@ trait InteractsWithConditionBinding
             }
 
             if ($sqlIndex > 0 && $boolean) {
-                $formatted[] = $boolean;
+                $formatted[] = (string) $boolean;
             }
 
             $formatted[] = $conditionStrings[$sqlIndex];
@@ -142,23 +139,18 @@ trait InteractsWithConditionBinding
     }
 
     /**
-     * Bind all values to a prepared statement
+     * Bind all values to a prepared statement.
      *
-     * @param PDOStatement $stmt
-     * @param array $additionalBindings
-     * @return void
+     * @param array<int, mixed> $additionalBindings
      */
     protected function bindAllValues(PDOStatement $stmt, array $additionalBindings = []): void
     {
         $index = 1;
 
-        // Bind additional values first
-        // SET clause values for UPDATE
         foreach ($additionalBindings as $value) {
             $stmt->bindValue($index++, $value, $this->getPdoParamType($value));
         }
 
-        // Bind ORDER BY raw bindings
         foreach ($this->orderBy as $order) {
             if (isset($order['type']) && $order['type'] === 'RAW_ORDER_BY' && !empty($order['bindings'])) {
                 foreach ($order['bindings'] as $value) {
@@ -167,7 +159,6 @@ trait InteractsWithConditionBinding
             }
         }
 
-        // Bind GROUP BY raw bindings
         foreach ($this->conditions as $condition) {
             if (isset($condition['type']) && $condition['type'] === 'RAW_GROUP_BY') {
                 foreach ($condition['bindings'] ?? [] as $value) {
@@ -176,10 +167,8 @@ trait InteractsWithConditionBinding
             }
         }
 
-        // Get WHERE clause bindings
         [$whereSql, $whereBindings] = $this->buildWhereClause();
 
-        // Bind WHERE clause values
         foreach ($whereBindings as $value) {
             $stmt->bindValue($index++, $value, $this->getPdoParamType($value));
         }

@@ -9,14 +9,14 @@ use Phaseolies\Database\Temporal\Attributes\Temporal;
 class TemporalManager
 {
     /**
-     * Cache of resolved #[Temporal] attribute instances, keyed by class name
+     * Cache of resolved #[Temporal] attribute instances, keyed by class name.
      *
      * @var array<string, Temporal|null>
      */
     private static array $cache = [];
 
     /**
-     * Per-process cache of history table column existence checks
+     * Per-process cache of history table column existence checks.
      *
      * @var array<string, bool>
      */
@@ -25,8 +25,7 @@ class TemporalManager
     /**
      * Determine whether the given model class carries #[Temporal].
      *
-     * @param string $class
-     * @return bool
+     * @param class-string $class
      */
     public static function isTemporal(string $class): bool
     {
@@ -36,8 +35,7 @@ class TemporalManager
     /**
      * Return the resolved #[Temporal] instance for a class, or null.
      *
-     * @param string $class
-     * @return Temporal|null
+     * @param class-string $class
      */
     public static function getAttribute(string $class): ?Temporal
     {
@@ -53,24 +51,18 @@ class TemporalManager
     /**
      * Return the history table name for the given base table and model class.
      *
-     * @param string $table
-     * @param string $class
-     * @return string
+     * @param class-string $class
      */
     public static function historyTable(string $table, string $class): string
     {
         $attr   = self::getAttribute($class);
-        $suffix = $attr?->suffix ?? '_history';
+        $suffix = $attr !== null ? $attr->suffix : '_history';
 
         return $table . $suffix;
     }
 
     /**
      * Snapshot the model's current state into the history table.
-     *
-     * @param Model $model
-     * @param string $action
-     * @return void
      */
     public static function snapshot(Model $model, string $action): void
     {
@@ -87,7 +79,6 @@ class TemporalManager
             $snapshot[$model->getPrimaryKey()] = $recordId;
         }
 
-        // For updates, record which columns changed
         $changedCols = null;
         if ($action === 'updated') {
             $dirty = $model->getDirtyAttributes();
@@ -96,7 +87,7 @@ class TemporalManager
         }
 
         $driver    = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-        $validFrom = self::nowMicro($driver);
+        $validFrom = self::nowMicro((string) $driver);
 
         $data = [
             'record_id'    => $recordId,
@@ -107,7 +98,7 @@ class TemporalManager
         ];
 
         $attr = self::getAttribute(get_class($model));
-        if ($attr?->trackActor && self::hasActorColumn($pdo, $historyTable, $driver)) {
+        if ($attr !== null && $attr->trackActor && self::hasActorColumn($pdo, $historyTable, (string) $driver)) {
             $data['actor'] = self::resolveActor();
         }
 
@@ -115,12 +106,7 @@ class TemporalManager
     }
 
     /**
-     * Check whether the `actor` column exists in the given history table
-     *
-     * @param PDO $pdo
-     * @param string $historyTable
-     * @param string $driver
-     * @return bool
+     * Check whether the `actor` column exists in the given history table.
      */
     private static function hasActorColumn(PDO $pdo, string $historyTable, string $driver): bool
     {
@@ -139,9 +125,11 @@ class TemporalManager
                     })(),
                     'sqlite' => (function () use ($pdo, $historyTable): bool {
                         $stmt = $pdo->query("PRAGMA table_info(\"{$historyTable}\")");
-                        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $col) {
-                            if ($col['name'] === 'actor') {
-                                return true;
+                        if ($stmt !== false) {
+                            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $col) {
+                                if ($col['name'] === 'actor') {
+                                    return true;
+                                }
                             }
                         }
                         return false;
@@ -163,10 +151,7 @@ class TemporalManager
     /**
      * Insert a single row into the history table.
      *
-     * @param PDO $pdo
-     * @param string $table
-     * @param array  $data
-     * @return void
+     * @param array<string, mixed> $data
      */
     private static function insertHistory(PDO $pdo, string $table, array $data): void
     {
@@ -179,9 +164,6 @@ class TemporalManager
 
     /**
      * Generate a high-resolution timestamp string for the current driver.
-     *
-     * @param string $driver
-     * @return string
      */
     private static function nowMicro(string $driver): string
     {
@@ -195,15 +177,15 @@ class TemporalManager
     }
 
     /**
-     * Try to resolve the currently authenticated user's identifier
-     *
-     * @return string|int|null
+     * Try to resolve the currently authenticated user's identifier.
      */
-    private static function resolveActor(): mixed
+    private static function resolveActor(): string|null
     {
         try {
-            $user = auth()->user();
-            return $user?->getKey();
+            /** @var \Phaseolies\Auth\Security\Authenticate $auth */
+            $auth = auth();
+            $user = $auth->user();
+            return $user !== null ? (string) $user->getKey() : null;
         } catch (\Throwable) {
             return null;
         }
@@ -212,10 +194,7 @@ class TemporalManager
     /**
      * Generate the CREATE TABLE SQL for the history table.
      *
-     * @param string $historyTable
-     * @param string $driver
-     * @param bool $trackActor
-     * @return string[]
+     * @return array<int, string>
      */
     public static function createHistoryTableSql(string $historyTable, string $driver, bool $trackActor = false): array
     {
@@ -228,6 +207,9 @@ class TemporalManager
         };
     }
 
+    /**
+     * @return array<int, string>
+     */
     private static function mysqlDdl(string $table, string $actorCol): array
     {
         return [
@@ -246,6 +228,9 @@ class TemporalManager
         ];
     }
 
+    /**
+     * @return array<int, string>
+     */
     private static function pgsqlDdl(string $table, string $actorCol): array
     {
         $stmts = [
@@ -265,6 +250,9 @@ class TemporalManager
         return $stmts;
     }
 
+    /**
+     * @return array<int, string>
+     */
     private static function sqliteDdl(string $table, string $actorCol): array
     {
         $stmts = [
@@ -295,9 +283,6 @@ class TemporalManager
 
     /**
      * Reset the internal class attribute cache. Useful in tests.
-     *
-     * @param string|null $class  When null, clears all entries.
-     * @return void
      */
     public static function resetCache(?string $class = null): void
     {

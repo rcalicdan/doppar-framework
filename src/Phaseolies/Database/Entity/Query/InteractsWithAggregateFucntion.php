@@ -6,9 +6,6 @@ trait InteractsWithAggregateFucntion
 {
     /**
      * Run a SQL aggregate function without eager loading.
-     *
-     * @param string $expression The aggregate SQL expression (e.g. SUM(column))
-     * @return float
      */
     protected function runAggregate(string $expression): float
     {
@@ -23,9 +20,6 @@ trait InteractsWithAggregateFucntion
 
     /**
      * Retrieve the sum of the values of a given column
-     *
-     * @param string $column
-     * @return float
      */
     public function sum(string $column): float
     {
@@ -34,9 +28,6 @@ trait InteractsWithAggregateFucntion
 
     /**
      * Retrieve the average of the values of a given column
-     *
-     * @param string $column
-     * @return float
      */
     public function avg(string $column): float
     {
@@ -45,31 +36,22 @@ trait InteractsWithAggregateFucntion
 
     /**
      * Retrieve the minimum value of a given column
-     *
-     * @param string $column
-     * @return mixed
      */
-    public function min(string $column)
+    public function min(string $column): float
     {
         return $this->runAggregate("MIN({$column})");
     }
 
     /**
      * Retrieve the maximum value of a given column
-     *
-     * @param string $column
-     * @return mixed
      */
-    public function max(string $column)
+    public function max(string $column): float
     {
         return $this->runAggregate("MAX({$column})");
     }
 
     /**
      * Retrieve the variance of a column
-     *
-     * @param string $column
-     * @return float
      */
     public function variance(string $column): float
     {
@@ -80,9 +62,6 @@ trait InteractsWithAggregateFucntion
 
     /**
      * Retrieve the standard deviation of a column
-     *
-     * @param string $column
-     * @return float
      */
     public function stdDev(string $column): float
     {
@@ -93,9 +72,6 @@ trait InteractsWithAggregateFucntion
 
     /**
      * Compute standard deviation by fetching variance via SQL and taking sqrt() in PHP
-     *
-     * @param string $column
-     * @return float
      */
     protected function stdDevPhp(string $column): float
     {
@@ -107,7 +83,7 @@ trait InteractsWithAggregateFucntion
         $result = $query->first();
         $variance = $result->aggregate ?? 0;
 
-        if ($variance === null || !is_numeric($variance) || $variance < 0) {
+        if (!is_numeric($variance) || $variance < 0) {
             return 0.0;
         }
 
@@ -116,9 +92,6 @@ trait InteractsWithAggregateFucntion
 
     /**
      * Compute standard deviation using a SQL expression provided by Grammar
-     *
-     * @param string $column
-     * @return float
      */
     protected function stdDevSql(string $column): float
     {
@@ -130,7 +103,7 @@ trait InteractsWithAggregateFucntion
         $result = $query->first();
         $value = $result->aggregate ?? 0;
 
-        if ($value === null || !is_numeric($value) || $value < 0) {
+        if (!is_numeric($value) || $value < 0) {
             return 0.0;
         }
 
@@ -139,10 +112,6 @@ trait InteractsWithAggregateFucntion
 
     /**
      * Retrieve the grouped concatenation of values
-     *
-     * @param string $column
-     * @param string $separator Defaults to ','
-     * @return string
      */
     public function groupConcat(string $column, string $separator = ','): string
     {

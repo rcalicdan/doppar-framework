@@ -9,11 +9,9 @@ use Phaseolies\Database\Entity\Builder;
 trait QueryUtils
 {
     /**
-     * Execute a query and get the result as a key-value dictionary
+     * Execute a query and get the result as a key-value dictionary.
      *
-     * @param string $keyColumn
-     * @param string $valueColumn
-     * @return Collection
+     * @return Collection<array-key, mixed>
      */
     public function toDictionary(string $keyColumn, string $valueColumn): Collection
     {
@@ -28,12 +26,9 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query and get the difference between two columns
+     * Execute a query and get the difference between two columns.
      *
-     * @param string $column1
-     * @param string $column2
-     * @param string $alias
-     * @return Collection
+     * @return Collection<array-key, mixed>
      */
     public function toDiff(string $column1, string $column2, string $alias = 'difference'): Collection
     {
@@ -41,12 +36,9 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query and get the result as a nested tree structure
+     * Execute a query and get the result as a nested tree structure.
      *
-     * @param string $primaryKey
-     * @param string $parentColumn
-     * @param string $index
-     * @return Collection
+     * @return Collection<array-key, mixed>
      */
     public function toTree(string $primaryKey, string $parentColumn, string $index = 'children'): Collection
     {
@@ -71,14 +63,13 @@ trait QueryUtils
                 foreach ($grouped[$parentId] as $item) {
                     $itemId = $item->$primaryKey;
 
-                    // Check for circular reference
                     if (isset($visited[$itemId])) {
                         throw new \RuntimeException("Circular reference detected in tree structure for item ID: {$itemId}");
                     }
 
                     $visited[$itemId] = true;
                     $children = $buildTree($itemId);
-                    unset($visited[$itemId]); // Backtrack
+                    unset($visited[$itemId]);
 
                     if (!empty($children)) {
                         $item->setRelation($index, new Collection($this->modelClass, $children));
@@ -96,13 +87,9 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query and get the ratio between two columns
+     * Execute a query and get the ratio between two columns.
      *
-     * @param string $numerator
-     * @param string $denominator
-     * @param string $alias
-     * @param int $precision
-     * @return Collection
+     * @return Collection<array-key, mixed>
      */
     public function toRatio(string $numerator, string $denominator, string $alias = 'ratio', int $precision = 2): Collection
     {
@@ -110,10 +97,7 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query with a random sample
-     *
-     * @param int $limit
-     * @return Builder
+     * Execute a query with a random sample.
      */
     public function random(int $limit): Builder
     {
@@ -121,15 +105,9 @@ trait QueryUtils
     }
 
     /**
-     * Search a JSON column
-     *
-     * @param string $column
-     * @param string $path
-     * @param mixed $value
-     * @param string $boolean
-     * @return self
+     * Search a JSON column.
      */
-    public function whereJson(string $column, string $path, $value, string $boolean = 'AND'): self
+    public function whereJson(string $column, string $path, mixed $value, string $boolean = 'AND'): self
     {
         [$expression, $bindings] = $this->jsonContains($column, $path, $value);
 
@@ -137,11 +115,7 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query with a case-insensitive pattern matching filter
-     *
-     * @param string $column
-     * @param string $pattern
-     * @return Builder
+     * Execute a query with a case-insensitive pattern matching filter.
      */
     public function iLike(string $column, string $pattern): Builder
     {
@@ -149,11 +123,7 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query with a custom transformation function
-     *
-     * @param callable $callback
-     * @param string $alias
-     * @return self
+     * Execute a query with a custom transformation function.
      */
     public function transformBy(callable $callback, string $alias = 'transformed'): self
     {
@@ -161,7 +131,6 @@ trait QueryUtils
 
         $expression = $callback($transformationBuilder);
 
-        // If the function didn't return a string, use the builder's SQL
         if (!is_string($expression)) {
             $expression = $transformationBuilder->toSql();
         }
@@ -176,12 +145,7 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query with a pattern matching filter
-     *
-     * @param string $column
-     * @param string $pattern
-     * @param string $type
-     * @return Builder
+     * Execute a query with a pattern matching filter.
      */
     public function wherePattern(string $column, string $pattern, string $type = 'LIKE'): Builder
     {
@@ -189,14 +153,7 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query with a first/last value in window with partitioning
-     *
-     * @param string $column
-     * @param string $orderColumn
-     * @param string $partitionColumn
-     * @param bool $first
-     * @param string $alias
-     * @return Builder
+     * Execute a query with a first/last value in window with partitioning.
      */
     public function firstLastInWindow(
         string $column,
@@ -217,12 +174,7 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query with a running difference calculation
-     *
-     * @param string $column
-     * @param string $orderColumn
-     * @param string $alias
-     * @return Builder
+     * Execute a query with a running difference calculation.
      */
     public function movingDifference(string $column, string $orderColumn, string $alias = 'running_diff'): Builder
     {
@@ -232,13 +184,7 @@ trait QueryUtils
     }
 
     /**
-     * Execute a query with a moving average calculation
-     *
-     * @param string $column
-     * @param int $windowSize
-     * @param string $orderColumn
-     * @param string $alias
-     * @return Builder
+     * Execute a query with a moving average calculation.
      */
     public function movingAverage(string $column, int $windowSize, string $orderColumn, string $alias = 'moving_avg'): Builder
     {

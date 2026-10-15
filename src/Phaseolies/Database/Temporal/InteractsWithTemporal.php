@@ -9,6 +9,13 @@ use Phaseolies\Database\Temporal\TemporalBuilder;
 use Phaseolies\Database\Temporal\TemporalManager;
 use Phaseolies\Support\Collection;
 
+/**
+ * @property int $__history_id
+ * @property string $__action
+ * @property string $__valid_from
+ * @property array<string, mixed>|null $__changed_cols
+ * @property string|null $__actor
+ */
 trait InteractsWithTemporal
 {
     /**
@@ -16,8 +23,6 @@ trait InteractsWithTemporal
      * automatically snapshot this model if it carries #[Temporal].
      *
      * Invoked once per class during the first model construction.
-     *
-     * @return void
      */
     protected function registerTemporalHooks(): void
     {
@@ -36,9 +41,6 @@ trait InteractsWithTemporal
     /**
      * Return a TemporalBuilder scoped to the given point in time.
      *
-     * @param string $datetime
-     * @return TemporalBuilder
-     *
      * @throws \RuntimeException
      */
     public static function at(string $datetime): TemporalBuilder
@@ -49,21 +51,22 @@ trait InteractsWithTemporal
             );
         }
 
+        /** @var static $model */
         $model = new static();
 
         return new TemporalBuilder(
-            pdo:        $model->getConnection(),
-            table:      $model->getTable(),
-            modelClass: static::class,
-            rowPerPage: $model->pageSize,
-            datetime:   $datetime,
+            $model->getConnection(),
+            $model->getTable(),
+            static::class,
+            $model->pageSize,
+            $datetime,
         );
     }
 
     /**
-     * Return the complete audit history for this model instance
+     * Return the complete audit history for this model instance.
      *
-     * @return Collection
+     * @return Collection<int, static>
      * @throws \RuntimeException
      */
     public function history(): Collection
@@ -84,21 +87,24 @@ trait InteractsWithTemporal
         $rows   = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $models = [];
 
-        foreach ($rows as $row) {
-            $data  = json_decode($row['snapshot'], true) ?? [];
-            $entry = new static($data);
-            $entry->setOriginalAttributes($data);
+        if ($rows !== false) {
+            foreach ($rows as $row) {
+                $data  = json_decode((string) $row['snapshot'], true) ?? [];
+                
+                /** @var static $entry */
+                $entry = new static($data);
+                $entry->setOriginalAttributes($data);
 
-            // Attach metadata as virtual attributes (not in $creatable → safe)
-            $entry->__history_id  = (int)   $row['history_id'];
-            $entry->__action      =          $row['action'];
-            $entry->__valid_from  =          $row['valid_from'];
-            $entry->__changed_cols = $row['changed_cols']
-                ? json_decode($row['changed_cols'], true)
-                : null;
-            $entry->__actor = $row['actor'] ?? null;
+                $entry->__history_id  = (int)   $row['history_id'];
+                $entry->__action      = (string) $row['action'];
+                $entry->__valid_from  = (string) $row['valid_from'];
+                $entry->__changed_cols = $row['changed_cols']
+                    ? json_decode((string) $row['changed_cols'], true)
+                    : null;
+                $entry->__actor = $row['actor'] ?? null;
 
-            $models[] = $entry;
+                $models[] = $entry;
+            }
         }
 
         return new Collection(static::class, $models);
@@ -107,9 +113,7 @@ trait InteractsWithTemporal
     /**
      * Compare the model's state at two points in time and return a structured diff.
      *
-     * @param string $from
-     * @param string $to
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     public function diff(string $from, string $to): ?array
     {
@@ -153,7 +157,6 @@ trait InteractsWithTemporal
      * Return a new (unsaved) model instance populated with the state of this
      * record at the given point in time.
      *
-     * @param string $datetime
      * @return static|null
      */
     public function rewindTo(string $datetime): ?static
@@ -166,10 +169,9 @@ trait InteractsWithTemporal
             return null;
         }
 
+        /** @var static $rewound */
         $rewound = new static($snapshot);
 
-        // Compare against the instance's current state so save() persists only
-        // the fields that actually change during the rewind/restore.
         $rewound->setOriginalAttributes($this->getAttributes());
 
         return $rewound;
@@ -178,9 +180,6 @@ trait InteractsWithTemporal
     /**
      * Restore this model to its state at the given datetime and immediately
      * persist the change.
-     *
-     * @param string $datetime
-     * @return bool
      */
     public function restoreTo(string $datetime): bool
     {
@@ -194,8 +193,6 @@ trait InteractsWithTemporal
             return false;
         }
 
-        // save() only writes creatable columns, so carry the snapshot's
-        // soft delete state over explicitly when it differs from now.
         if ($this->usesSoftDeletes() && $rewound->trashed() !== $this->trashed()) {
             return $rewound->trashed() ? $rewound->delete() : $rewound->restore();
         }
@@ -205,8 +202,6 @@ trait InteractsWithTemporal
 
     /**
      * Whether this model class is marked #[Temporal].
-     *
-     * @return bool
      */
     public function isTemporal(): bool
     {
@@ -215,8 +210,6 @@ trait InteractsWithTemporal
 
     /**
      * Return the history table name for this model.
-     *
-     * @return string
      */
     public function historyTable(): string
     {
@@ -226,15 +219,13 @@ trait InteractsWithTemporal
     /**
      * Fetch the raw snapshot array for this record at the given datetime.
      *
-     * @param string $datetime
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     private function snapshotAt(string $datetime): ?array
     {
         $historyTable = $this->historyTable();
         $pdo          = $this->getConnection();
 
-        // Normalize to end-of-day when only a date is given
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($datetime))) {
             $datetime .= ' 23:59:59.999999';
         }
@@ -252,7 +243,7 @@ trait InteractsWithTemporal
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $row ? (json_decode($row['snapshot'], true) ?? null) : null;
+        return $row ? (json_decode((string) $row['snapshot'], true) ?? null) : null;
     }
 
     /**

@@ -9,22 +9,17 @@ trait InteractsWithSoftDeleteScope
     /**
      * Which rows a soft-deletable query returns: 'exclude' hides trashed
      * rows, 'include' returns everything, 'only' returns trashed rows only.
-     *
-     * @var string
      */
     protected string $trashed = 'exclude';
 
     /**
      * When true, delete() removes rows even on a soft-deletable model.
-     *
-     * @var bool
      */
     protected bool $forceDeleting = false;
 
     /**
      * Include soft-deleted rows in the results.
      *
-     * @return self
      * @throws \LogicException
      */
     public function withTrashed(): self
@@ -39,7 +34,6 @@ trait InteractsWithSoftDeleteScope
     /**
      * Return only soft-deleted rows.
      *
-     * @return self
      * @throws \LogicException
      */
     public function onlyTrashed(): self
@@ -54,7 +48,6 @@ trait InteractsWithSoftDeleteScope
     /**
      * Exclude soft-deleted rows from the results (the default).
      *
-     * @return self
      * @throws \LogicException
      */
     public function withoutTrashed(): self
@@ -68,12 +61,6 @@ trait InteractsWithSoftDeleteScope
 
     /**
      * Turn the soft delete constraint off for this query.
-     *
-     * Used internally for queries that target a single row by its key,
-     * such as saving or deleting a model that may already be trashed.
-     *
-     * @internal
-     * @return self
      */
     public function withoutSoftDeleteScope(): self
     {
@@ -85,7 +72,6 @@ trait InteractsWithSoftDeleteScope
     /**
      * Restore the soft-deleted rows matched by the query.
      *
-     * @return bool
      * @throws \LogicException
      */
     public function restore(): bool
@@ -102,18 +88,16 @@ trait InteractsWithSoftDeleteScope
     /**
      * Write the soft delete column on the matched rows, touching
      * updated_at with the given timestamp when the model uses timestamps.
-     *
-     * Taking the timestamp from the caller lets a model mirror the exact
-     * values that were written.
-     *
-     * @internal
-     * @param string|null $deletedAt
-     * @param string $timestamp
-     * @return bool
      */
     public function writeSoftDeleteState(?string $deletedAt, string $timestamp): bool
     {
-        $attributes = [$this->getSoftDeleteColumn() => $deletedAt];
+        $column = $this->getSoftDeleteColumn();
+
+        if ($column === null) {
+            return false;
+        }
+
+        $attributes = [$column => $deletedAt];
 
         if ($this->getModel()->usesTimestamps()) {
             $attributes['updated_at'] = $timestamp;
@@ -125,7 +109,6 @@ trait InteractsWithSoftDeleteScope
     /**
      * Permanently delete the rows matched by the query.
      *
-     * @return bool
      * @throws \LogicException
      */
     public function forceDelete(): bool
@@ -144,8 +127,6 @@ trait InteractsWithSoftDeleteScope
     /**
      * Determine whether delete() on this query should stamp rows
      * instead of removing them.
-     *
-     * @return bool
      */
     protected function shouldSoftDelete(): bool
     {
@@ -154,8 +135,6 @@ trait InteractsWithSoftDeleteScope
 
     /**
      * Get the soft delete column of the query's model, if it has one.
-     *
-     * @return string|null
      */
     public function getSoftDeleteColumn(): ?string
     {
@@ -164,16 +143,8 @@ trait InteractsWithSoftDeleteScope
 
     /**
      * Build the soft delete constraint for this query.
-     *
-     * With no table the column is qualified exactly as the query's own
-     * FROM clause names its table (honouring an alias), so the reference
-     * resolves on every driver. A table passed in comes from a hand-built
-     * subquery that quotes its identifiers, so it is quoted to match.
-     *
-     * @param string|null $table
-     * @return string|null
      */
-    protected function compileSoftDeleteConstraint(?string $table = null): ?string
+    public function compileSoftDeleteConstraint(?string $table = null): ?string
     {
         $column = $this->getSoftDeleteColumn();
 
@@ -191,10 +162,7 @@ trait InteractsWithSoftDeleteScope
     }
 
     /**
-     * Get the name the query's FROM clause refers to its table by:
-     * the alias for "table as alias" or "table alias", else the table.
-     *
-     * @return string
+     * Get the name the query's FROM clause refers to its table by.
      */
     protected function tableReference(): string
     {
@@ -208,12 +176,9 @@ trait InteractsWithSoftDeleteScope
     }
 
     /**
-     * Build the default soft delete constraint for a related model used
-     * inside a hand-written subquery, as an " AND ..." fragment.
+     * Build the default soft delete constraint for a related model.
      *
-     * @param string $modelClass
-     * @param string $table
-     * @return string
+     * @param class-string<\Phaseolies\Database\Entity\Model> $modelClass
      */
     protected function relatedSoftDeleteClause(string $modelClass, string $table): string
     {
@@ -230,10 +195,7 @@ trait InteractsWithSoftDeleteScope
      * Build the WHERE clause, appending the soft delete constraint to
      * the user's conditions.
      *
-     * The user's conditions are wrapped in parentheses so that an OR
-     * among them cannot bypass the constraint.
-     *
-     * @return array [sql, bindings]
+     * @return array{0: string, 1: array<int, mixed>}
      */
     protected function buildWhereClause(): array
     {
@@ -249,8 +211,6 @@ trait InteractsWithSoftDeleteScope
     }
 
     /**
-     * @param string $method
-     * @return void
      * @throws \LogicException
      */
     protected function assertSoftDeletable(string $method): void

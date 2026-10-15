@@ -5,14 +5,16 @@ namespace Phaseolies\Database\Entity\Query;
 trait Debuggable
 {
     /**
-     * @var array Query execution metrics storage
+     * Query execution metrics storage.
+     *
+     * @var array<int, mixed>
      */
     protected array $queryMetrics = [];
 
     /**
-     * Get all collected query metrics
+     * Get all collected query metrics.
      *
-     * @return array
+     * @return array<int, mixed>
      */
     public function getQueryMetrics(): array
     {
@@ -20,9 +22,7 @@ trait Debuggable
     }
 
     /**
-     * Clear collected query metrics
-     *
-     * @return void
+     * Clear collected query metrics.
      */
     public function clearQueryMetrics(): void
     {
@@ -30,20 +30,17 @@ trait Debuggable
     }
 
     /**
-     * Get the last executed query metrics
+     * Get the last executed query metrics.
      *
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     public function getLastQueryMetrics(): ?array
     {
-        return end($this->queryMetrics) ?: null;
+        return empty($this->queryMetrics) ? null : (array) end($this->queryMetrics);
     }
 
     /**
-     * Dump the SQL query that would be executed
-     *
-     * @param bool $withBindings
-     * @return self
+     * Dump the SQL query that would be executed.
      */
     public function dumpSql(bool $withBindings = false): self
     {
@@ -52,7 +49,8 @@ trait Debuggable
         if ($withBindings) {
             $bindings = $this->getBindings();
             foreach ($bindings as $binding) {
-                $sql = preg_replace('/\?/', is_numeric($binding) ? $binding : "'{$binding}'", $sql, 1);
+                $replacement = is_numeric($binding) ? (string) $binding : "'{$binding}'";
+                $sql = (string) preg_replace('/\?/', $replacement, $sql, 1);
             }
         }
 
@@ -62,10 +60,7 @@ trait Debuggable
     }
 
     /**
-     * dd the SQL query that would be executed
-     *
-     * @param bool $withBindings
-     * @return never
+     * dd the SQL query that would be executed.
      */
     public function ddSql(bool $withBindings = false): never
     {
@@ -75,9 +70,9 @@ trait Debuggable
     }
 
     /**
-     * Get the bindings for the current query
+     * Get the bindings for the current query.
      *
-     * @return array
+     * @return array<int, mixed>
      */
     protected function getBindings(): array
     {
@@ -123,9 +118,9 @@ trait Debuggable
     }
 
     /**
-     * Debug the current query without executing it
+     * Debug the current query without executing it.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function debug(): array
     {
@@ -144,9 +139,9 @@ trait Debuggable
     }
 
     /**
-     * Get the estimated query execution plan (EXPLAIN)
+     * Get the estimated query execution plan (EXPLAIN).
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     public function explain(): array
     {
@@ -155,6 +150,8 @@ trait Debuggable
         $this->bindValues($stmt);
         $stmt->execute();
 
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        return $result !== false ? $result : [];
     }
 }

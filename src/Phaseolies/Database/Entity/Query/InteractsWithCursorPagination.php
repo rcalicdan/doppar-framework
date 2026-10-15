@@ -5,13 +5,9 @@ namespace Phaseolies\Database\Entity\Query;
 trait InteractsWithCursorPagination
 {
     /**
-     * Cursor pagination with forward only support
+     * Cursor pagination with forward only support.
      *
-     * @param int $perPage
-     * @param string $cursorColumn
-     * @param string $direction asc|desc
-     * @param string|null $cursor
-     * @return array
+     * @return array{data: array<int, mixed>, per_page: int, next_cursor: string|null, next_page_url: string|null, has_more: bool, direction: string}
      */
     public function cursorPaginate(int $perPage = 15, string $cursorColumn = 'id', string $direction = 'asc', ?string $cursor = null): array
     {
@@ -59,38 +55,33 @@ trait InteractsWithCursorPagination
     }
 
     /**
-     * Encode a cursor value to a URL-safe base64 string
-     *
-     * @param mixed $value
-     * @return string
+     * Encode a cursor value to a URL-safe base64 string.
      */
     protected function encodeCursor(mixed $value): string
     {
-        return base64_encode(json_encode(['v' => $value]));
+        return base64_encode((string) json_encode(['v' => $value]));
     }
 
     /**
-     * Decode a cursor string back to its original value
-     *
-     * @param string $cursor
-     * @return mixed
+     * Decode a cursor string back to its original value.
      */
     protected function decodeCursor(string $cursor): mixed
     {
         try {
-            $decoded = json_decode(base64_decode($cursor), true);
-            return $decoded['v'] ?? null;
+            $decodedStr = base64_decode($cursor, true);
+            if ($decodedStr === false) {
+                return null;
+            }
+            
+            $decoded = json_decode($decodedStr, true);
+            return is_array($decoded) ? ($decoded['v'] ?? null) : null;
         } catch (\Throwable $e) {
             return null;
         }
     }
 
     /**
-     * Extract the cursor column value from a model or array item
-     *
-     * @param mixed $item
-     * @param string $column
-     * @return mixed
+     * Extract the cursor column value from a model or array item.
      */
     protected function getCursorValue(mixed $item, string $column): mixed
     {
@@ -98,13 +89,15 @@ trait InteractsWithCursorPagination
             return $item[$column] ?? null;
         }
 
-        return $item->{$column} ?? null;
+        if (is_object($item)) {
+            return $item->{$column} ?? null;
+        }
+
+        return null;
     }
 
     /**
-     * Get current request path
-     *
-     * @return string
+     * Get current request path.
      */
     protected function getCurrentPath(): string
     {

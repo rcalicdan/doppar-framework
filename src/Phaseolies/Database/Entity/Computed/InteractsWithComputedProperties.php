@@ -18,7 +18,6 @@ trait InteractsWithComputedProperties
      */
     private function ensureComputedCached(): void
     {
-        /** @var class-string $class */
         $class = static::class;
 
         if (!array_key_exists($class, self::$computedAttributeCache)) {
@@ -29,7 +28,6 @@ trait InteractsWithComputedProperties
     /**
      * Scan the class for public methods decorated with #[Computed].
      *
-     * @param class-string $class
      * @return list<array{method: string, key: string}>
      */
     private static function scanComputedAttributes(string $class): array

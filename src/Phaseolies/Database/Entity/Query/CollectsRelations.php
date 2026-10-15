@@ -3,23 +3,24 @@
 namespace Phaseolies\Database\Entity\Query;
 
 use Phaseolies\Support\Collection;
+use Phaseolies\Database\Entity\Model;
 
 trait CollectsRelations
 {
     /**
-     * Collect all related models from a collection for a given relation
+     * Collect all related models from a collection for a given relation.
      *
-     * @param Collection $collection
-     * @param string $relation
-     * @return array [models, modelClass]
+     * @param Collection<int|string, mixed> $collection
+     * @return array{0: array<int, mixed>, 1: class-string<Model>|null} [models, modelClass]
      */
     protected function collectRelatedModels(Collection $collection, string $relation): array
     {
         $allRelatedModels = [];
+        /** @var class-string<Model>|null */
         $relatedModelClass = null;
 
         foreach ($collection->all() as $model) {
-            if ($model->relationLoaded($relation)) {
+            if (is_object($model) && method_exists($model, 'relationLoaded') && $model->relationLoaded($relation)) {
                 $related = $model->getRelation($relation);
 
                 if ($related instanceof Collection) {
@@ -27,11 +28,14 @@ trait CollectsRelations
                         $allRelatedModels[] = $relatedModel;
                     }
                     if (!$relatedModelClass && $related->count() > 0) {
-                        $relatedModelClass = get_class($related->first());
+                        $firstRelated = $related->first();
+                        if (is_object($firstRelated)) {
+                            $relatedModelClass = get_class($firstRelated);
+                        }
                     }
                 } elseif ($related !== null) {
                     $allRelatedModels[] = $related;
-                    if (!$relatedModelClass) {
+                    if (!$relatedModelClass && is_object($related)) {
                         $relatedModelClass = get_class($related);
                     }
                 }
@@ -42,19 +46,17 @@ trait CollectsRelations
     }
 
     /**
-     * Collect nested related models following a relation path
+     * Collect nested related models following a relation path.
      *
-     * @param Collection $collection
-     * @param string $nestedRelation
-     * @return array [models, modelClass, remainingPath]
+     * @param Collection<int|string, mixed> $collection
+     * @return array{0: array<int, mixed>, 1: class-string<Model>|null, 2: string} [models, modelClass, remainingPath]
      */
     protected function collectNestedRelatedModels(Collection $collection, string $nestedRelation): array
     {
         $relations = explode('.', $nestedRelation);
-        $primaryRelation = array_shift($relations);
+        $primaryRelation = array_shift($relations) ?? '';
         $remainingPath = implode('.', $relations);
 
-        // First load the primary relation if not already loaded
         if (!$this->areRelationsLoaded($collection, [$primaryRelation])) {
             $this->loadRelation($collection, $primaryRelation);
         }
@@ -65,15 +67,18 @@ trait CollectsRelations
     }
 
     /**
-     * Check if relations are loaded on all models in collection
+     * Check if relations are loaded on all models in collection.
      *
-     * @param Collection $collection
-     * @param array $relations
-     * @return bool
+     * @param Collection<int|string, mixed> $collection
+     * @param array<int, string> $relations
      */
     protected function areRelationsLoaded(Collection $collection, array $relations): bool
     {
         foreach ($collection->all() as $model) {
+            if (!is_object($model) || !method_exists($model, 'relationLoaded')) {
+                return false;
+            }
+
             foreach ($relations as $relation) {
                 if (!$model->relationLoaded($relation)) {
                     return false;
@@ -84,10 +89,9 @@ trait CollectsRelations
     }
 
     /**
-     * Parse relation string to extract relation name and column selection
-     * 
-     * @param string $relation
-     * @return array [relationName, columns]
+     * Parse relation string to extract relation name and column selection.
+     *
+     * @return array{0: string, 1: array<int, string>} [relationName, columns]
      */
     protected function parseRelationWithColumns(string $relation): array
     {
@@ -102,10 +106,9 @@ trait CollectsRelations
     }
 
     /**
-     * Parse nested relation with column selection
-     * 
-     * @param string $nestedRelation
-     * @return array [relations, finalColumns]
+     * Parse nested relation with column selection.
+     *
+     * @return array{0: array<int, string>, 1: array<int, string>} [relations, finalColumns]
      */
     protected function parseNestedRelationWithColumns(string $nestedRelation): array
     {
@@ -117,7 +120,6 @@ trait CollectsRelations
             [$relationName, $columns] = $this->parseRelationWithColumns($part);
             $relations[] = $relationName;
 
-            // Only the last relation can have column selection
             if ($index === count($parts) - 1 && !empty($columns)) {
                 $finalColumns = $columns;
             }
@@ -127,11 +129,9 @@ trait CollectsRelations
     }
 
     /**
-     * Apply column selection constraint to a query
-     * 
-     * @param callable|null $existingConstraint
-     * @param array $columns
-     * @return callable
+     * Apply column selection constraint to a query.
+     *
+     * @param array<int, string> $columns
      */
     protected function createColumnConstraint(?callable $existingConstraint, array $columns): callable
     {
@@ -147,18 +147,14 @@ trait CollectsRelations
     }
 
     /**
-     * Ensure foreign key is included in query selection
-     *
-     * @param self $query
-     * @param string $foreignKey
-     * @return void
+     * Ensure foreign key is included in query selection.
      */
-    protected function ensureForeignKeyInSelection($query, string $foreignKey): void
+    protected function ensureForeignKeyInSelection(mixed $query, string $foreignKey): void
     {
-        if ($query->fields !== ['*']) {
+        if (isset($query->fields) && $query->fields !== ['*']) {
             $hasKey = false;
             foreach ($query->fields as $field) {
-                $plainField = str_replace(['`', '"'], '', $field);
+                $plainField = str_replace(['`', '"'], '', (string) $field);
                 if (strpos($plainField, '.') !== false) {
                     $parts = explode('.', $plainField);
                     $plainField = end($parts);
@@ -176,17 +172,11 @@ trait CollectsRelations
     }
 
     /**
-     * Ensure required keys are included in query selection
-     *
-     * @param self $query
-     * @param string $foreignKey
-     * @param string $primaryKey
-     * @return void
+     * Ensure required keys are included in query selection.
      */
-    protected function ensureRequiredKeysInSelection($query, string $foreignKey, string $primaryKey): void
+    protected function ensureRequiredKeysInSelection(mixed $query, string $foreignKey, string $primaryKey): void
     {
-        if ($query->fields === ['*']) {
-            // No need to add anything if selecting all
+        if (isset($query->fields) && $query->fields === ['*']) {
             return;
         }
 
@@ -195,7 +185,7 @@ trait CollectsRelations
         foreach ($keysToEnsure as $key) {
             $hasKey = false;
             foreach ($query->fields as $field) {
-                $plainField = str_replace(['`', '"'], '', $field);
+                $plainField = str_replace(['`', '"'], '', (string) $field);
                 if (strpos($plainField, '.') !== false) {
                     $parts = explode('.', $plainField);
                     $plainField = end($parts);

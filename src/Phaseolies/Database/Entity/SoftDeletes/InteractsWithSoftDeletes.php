@@ -33,7 +33,11 @@ trait InteractsWithSoftDeletes
     {
         $column = $this->getSoftDeleteColumn();
 
-        return $column !== null && ($this->attributes[$column] ?? null) !== null;
+        if ($column === null) {
+            return false;
+        }
+
+        return ($this->attributes[$column] ?? null) !== null;
     }
 
     /**
@@ -127,7 +131,6 @@ trait InteractsWithSoftDeletes
     private function syncSoftDeleteAttributes(?string $deletedAt, string $timestamp): void
     {
         $column = $this->getSoftDeleteColumn();
-        
         $attributes = [];
 
         if ($column !== null) {

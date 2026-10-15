@@ -18,7 +18,6 @@ trait InteractsWithWatches
      */
     protected function registerWatchesAttributes(): void
     {
-        /** @var class-string $class */
         $class = static::class;
 
         if (!array_key_exists($class, self::$watchesAttributeCache)) {

@@ -36,7 +36,6 @@ trait InteractsWithCasting
      */
     private function ensureCastsCached(): void
     {
-        /** @var class-string $class */
         $class = static::class;
 
         if (!array_key_exists($class, self::$castAttributeCache)) {
@@ -46,13 +45,12 @@ trait InteractsWithCasting
 
     /**
      * Scan a class for properties decorated with #[Cast].
-     *
-     * @param class-string $class
+     * 
      * @return array<string, string>
      */
     private function scanCastAttributes(string $class): array
     {
-        $found = [];
+        $found      = [];
         $reflection = new \ReflectionClass($class);
 
         foreach ($reflection->getProperties() as $property) {

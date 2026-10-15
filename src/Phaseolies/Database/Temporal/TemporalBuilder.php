@@ -11,17 +11,11 @@ class TemporalBuilder extends Builder
 {
     /**
      * The target point-in-time for history queries.
-     *
-     * @var string
      */
     protected string $datetime;
 
     /**
-     * @param PDO $pdo
-     * @param string $table
-     * @param string $modelClass
-     * @param int $rowPerPage 
-     * @param string $datetime
+     * @param class-string<Model> $modelClass
      */
     public function __construct(PDO $pdo, string $table, string $modelClass, int $rowPerPage, string $datetime)
     {
@@ -33,13 +27,7 @@ class TemporalBuilder extends Builder
     /**
      * Return a Collection of model instances as they existed at $this->datetime.
      *
-     * Algorithm:
-     *   For each distinct record_id in the history table, take the row with the
-     *   largest valid_from that is still ≤ $datetime. Exclude records whose last
-     *   action was 'deleted'. Hydrate each snapshot into a model instance.
-     *   Apply any fluent where / orderBy / limit conditions in PHP.
-     *
-     * @return Collection
+     * @return Collection<int, Model>
      */
     public function get(): Collection
     {
@@ -53,9 +41,7 @@ class TemporalBuilder extends Builder
     }
 
     /**
-     * Return the first model instance as it existed at $this->datetime
-     *
-     * @return Model|null
+     * Return the first model instance as it existed at $this->datetime.
      */
     public function first(): ?Model
     {
@@ -74,14 +60,13 @@ class TemporalBuilder extends Builder
 
     /**
      * Find a specific record by primary key as it existed at $this->datetime.
-     *
-     * @param int|string $id
-     * @return Model|null
      */
-    public function find($id): ?Model
+    public function find(mixed $id): ?Model
     {
         $historyTable = TemporalManager::historyTable($this->table, $this->modelClass);
-        $key          = (new $this->modelClass())->getKeyName();
+        
+        /** @var Model $modelInstance */
+        $modelInstance = new $this->modelClass();
 
         $sql = "
             SELECT snapshot
@@ -101,16 +86,13 @@ class TemporalBuilder extends Builder
             return null;
         }
 
-        return $this->hydrateOne($row['snapshot']);
+        return $this->hydrateOne((string) $row['snapshot']);
     }
 
     /**
-     * Fetch the latest-snapshot-per-record rows from the history table
+     * Fetch the latest-snapshot-per-record rows from the history table.
      *
-     * Uses a correlated subquery for broad driver compatibility (MySQL 5.7+,
-     * PostgreSQL 9+, SQLite 3.7+).
-     *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     private function fetchTemporalRows(): array
     {
@@ -131,32 +113,33 @@ class TemporalBuilder extends Builder
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$this->datetime]);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        return $results !== false ? $results : [];
     }
 
     /**
      * Hydrate an array of raw history rows into model instances.
      *
-     * @param array $rows
+     * @param array<int, array<string, mixed>> $rows
      * @return Model[]
      */
     private function hydrateSnapshots(array $rows): array
     {
         return array_map(
-            fn(array $row) => $this->hydrateOne($row['snapshot']),
+            fn(array $row) => $this->hydrateOne((string) $row['snapshot']),
             $rows
         );
     }
 
     /**
-     * Decode a JSON snapshot string and construct a model instance from it
-     *
-     * @param string $snapshotJson
-     * @return Model
+     * Decode a JSON snapshot string and construct a model instance from it.
      */
     private function hydrateOne(string $snapshotJson): Model
     {
         $data  = json_decode($snapshotJson, true) ?? [];
+        
+        /** @var Model $model */
         $model = new $this->modelClass($data);
         $model->setOriginalAttributes($data);
 
@@ -180,7 +163,6 @@ class TemporalBuilder extends Builder
             $pass = true;
 
             foreach ($this->conditions as $condition) {
-                // Skip typed conditions (NESTED, EXISTS, RAW_WHERE, etc.)
                 if (isset($condition['type'])) {
                     continue;
                 }
@@ -188,11 +170,10 @@ class TemporalBuilder extends Builder
                 [$boolean, $field, $operator, $value] = array_pad($condition, 4, null);
                 $extra = $condition[4] ?? null;
 
-                // Strip table prefix if present (e.g. "contracts.status" → "status")
-                $column = str_contains($field, '.') ? explode('.', $field, 2)[1] : $field;
+                $column = str_contains((string) $field, '.') ? explode('.', (string) $field, 2)[1] : (string) $field;
                 $actual = $model->{$column} ?? null;
 
-                $result = $this->evaluateCondition($actual, $operator, $value, $extra);
+                $result = $this->evaluateCondition($actual, (string) $operator, $value, $extra);
 
                 $pass = $boolean === 'OR' ? ($pass || $result) : ($pass && $result);
             }
@@ -203,12 +184,6 @@ class TemporalBuilder extends Builder
 
     /**
      * Evaluate a single condition against an actual value.
-     *
-     * @param mixed $actual
-     * @param string $operator
-     * @param mixed $value
-     * @param mixed $extra
-     * @return bool
      */
     private function evaluateCondition(mixed $actual, string $operator, mixed $value, mixed $extra): bool
     {
@@ -226,19 +201,14 @@ class TemporalBuilder extends Builder
             'NOT IN'      => !in_array($actual, (array) $value, strict: false),
             'BETWEEN'     => $actual >= $value && $actual <= $extra,
             'NOT BETWEEN' => $actual < $value  || $actual > $extra,
-            'LIKE', 'ILIKE' => $this->phpLike($actual, $value),
-            'NOT LIKE'    => !$this->phpLike($actual, $value),
+            'LIKE', 'ILIKE' => $this->phpLike($actual, (string) $value),
+            'NOT LIKE'    => !$this->phpLike($actual, (string) $value),
             default       => true,
         };
     }
 
     /**
      * Emulate SQL LIKE pattern matching in PHP.
-     * Converts SQL wildcards (% and _) to regex equivalents.
-     *
-     * @param mixed  $actual
-     * @param string $pattern
-     * @return bool
      */
     private function phpLike(mixed $actual, string $pattern): bool
     {
@@ -262,13 +232,12 @@ class TemporalBuilder extends Builder
 
         usort($models, function (Model $a, Model $b) {
             foreach ($this->orderBy as $order) {
-                // Skip raw ORDER BY entries
                 if (isset($order['type'])) {
                     continue;
                 }
 
                 [$field, $direction] = $order;
-                $col = str_contains($field, '.') ? explode('.', $field, 2)[1] : $field;
+                $col = str_contains((string) $field, '.') ? explode('.', (string) $field, 2)[1] : (string) $field;
 
                 $va = $a->{$col} ?? null;
                 $vb = $b->{$col} ?? null;
@@ -276,7 +245,7 @@ class TemporalBuilder extends Builder
                 $cmp = $va <=> $vb;
 
                 if ($cmp !== 0) {
-                    return strtoupper($direction) === 'DESC' ? -$cmp : $cmp;
+                    return strtoupper((string) $direction) === 'DESC' ? -$cmp : $cmp;
                 }
             }
 
@@ -309,26 +278,20 @@ class TemporalBuilder extends Builder
     }
 
     /**
-     * Normalize various human-friendly datetime strings into a sortable
-     *
-     * @param string $datetime
-     * @return string
+     * Normalize various human-friendly datetime strings into a sortable format.
      */
     private function normalizeDateTime(string $datetime): string
     {
         $datetime = trim($datetime);
 
-        // Date-only: append end-of-day
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $datetime)) {
             return $datetime . ' 23:59:59.999999';
         }
 
-        // Date + HH:MM only
         if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $datetime)) {
             return $datetime . ':59.999999';
         }
 
-        // Date + HH:MM:SS only
         if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $datetime)) {
             return $datetime . '.999999';
         }
@@ -337,9 +300,7 @@ class TemporalBuilder extends Builder
     }
 
     /**
-     * Expose the resolved datetime for external use (e.g. in TemporalEntry).
-     *
-     * @return string
+     * Expose the resolved datetime for external use.
      */
     public function getDatetime(): string
     {
