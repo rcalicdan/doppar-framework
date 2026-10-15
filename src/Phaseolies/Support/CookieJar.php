@@ -7,11 +7,11 @@ use Phaseolies\Http\Response\Cookie;
 class CookieJar
 {
     /**
-     * Default cookie settings
+     * Default cookie settings.
      *
-     * @var array
+     * @var array{expires: int, path: string, domain: string|null, secure: bool|null, httponly: bool, raw: bool, samesite: 'lax'|'none'|'strict'|''|null, partitioned: bool}
      */
-    protected $defaults = [
+    protected array $defaults = [
         'expires' => 0,
         'path' => '/',
         'domain' => null,
@@ -23,48 +23,39 @@ class CookieJar
     ];
 
     /**
-     * Create a new cookie instance
+     * Create a new cookie instance.
      *
-     * @param string $name
-     * @param string|null $value
-     * @param array $options
-     * @return Cookie
+     * @param array<string, mixed> $options
      */
     public function make(string $name, ?string $value = null, array $options = []): Cookie
     {
-        $options = array_merge($this->defaults, $options);
+        /** @var array{expires: int, path: string, domain: string|null, secure: bool|null, httponly: bool, raw: bool, samesite: 'lax'|'none'|'strict'|''|null, partitioned: bool} $resolved */
+        $resolved = array_merge($this->defaults, $options);
 
         return Cookie::create(
             $name,
             $value,
-            $options['expires'],
-            $options['path'],
-            $options['domain'],
-            $options['secure'],
-            $options['httponly'],
-            $options['raw'],
-            $options['samesite'],
-            $options['partitioned']
+            $resolved['expires'],
+            $resolved['path'],
+            $resolved['domain'],
+            $resolved['secure'],
+            $resolved['httponly'],
+            $resolved['raw'],
+            $resolved['samesite'],
+            $resolved['partitioned']
         );
     }
 
     /**
-     * Retrieve a cookie value
-     *
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
+     * Retrieve a cookie value.
      */
-    public function get(string $key, $default = null)
+    public function get(string $key, mixed $default = null): mixed
     {
         return $_COOKIE[$key] ?? $default;
     }
 
     /**
-     * Check if a cookie exists
-     *
-     * @param string $key
-     * @return bool
+     * Check if a cookie exists.
      */
     public function has(string $key): bool
     {
@@ -72,14 +63,11 @@ class CookieJar
     }
 
     /**
-     * Store a cookie
+     * Store a cookie.
      *
-     * @param Cookie|string $name
-     * @param string|null $value
-     * @param array $options
-     * @return void
+     * @param array<string, mixed> $options
      */
-    public function store($name, $value = null, array $options = []): bool
+    public function store(Cookie|string $name, ?string $value = null, array $options = []): bool
     {
         if (!$name instanceof Cookie) {
             $name = $this->make($name, $value, $options);
@@ -89,11 +77,9 @@ class CookieJar
     }
 
     /**
-     * Remove a cookie
+     * Remove a cookie.
      *
-     * @param string $name
-     * @param array $options
-     * @return void
+     * @param array<string, mixed> $options
      */
     public function remove(string $name, array $options = []): void
     {
@@ -103,12 +89,9 @@ class CookieJar
     }
 
     /**
-     * Store a cookie that lasts "forever" (5 years)
+     * Store a cookie that lasts "forever" (5 years).
      *
-     * @param string $name
-     * @param string $value
-     * @param array $options
-     * @return void
+     * @param array<string, mixed> $options
      */
     public function forever(string $name, string $value, array $options = []): void
     {
@@ -117,10 +100,7 @@ class CookieJar
     }
 
     /**
-     * Set a cookie using the Cookie object
-     *
-     * @param Cookie $cookie
-     * @return bool
+     * Set a cookie using the Cookie object.
      */
     protected function setCookie(Cookie $cookie): bool
     {
@@ -135,7 +115,7 @@ class CookieJar
         $options = [
             'expires' => $cookie->getExpiresTime(),
             'path' => $cookie->getPath(),
-            'domain' => $cookie->getDomain(),
+            'domain' => $cookie->getDomain() ?? '',
             'secure' => $cookie->isSecure(),
             'httponly' => $cookie->isHttpOnly(),
         ];
@@ -152,10 +132,9 @@ class CookieJar
     }
 
     /**
-     * Get all cookies that were sent with the current request
+     * Get all cookies that were sent with the current request.
      *
-     * @param bool $decodeValues
-     * @return array
+     * @return array<string, mixed>
      */
     public function all(bool $decodeValues = true): array
     {
@@ -168,6 +147,6 @@ class CookieJar
             $cookies[$name] = is_string($value) ? rawurldecode($value) : $value;
         }
 
-        return $cookies ?? [];
+        return $cookies;
     }
 }

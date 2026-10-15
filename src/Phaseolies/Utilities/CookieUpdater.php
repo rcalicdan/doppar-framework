@@ -8,14 +8,12 @@ use Phaseolies\Http\Response\Cookie;
 class CookieUpdater
 {
     /**
-     * The cookie instance being modified
-     *
-     * @var Cookie
+     * The cookie instance being modified.
      */
     protected Cookie $cookie;
 
     /**
-     * Initialize with a Cookie instance
+     * Initialize with a Cookie instance.
      */
     public function __construct(Cookie $cookie)
     {
@@ -23,10 +21,7 @@ class CookieUpdater
     }
 
     /**
-     * Update the cookie's value
-     *
-     * @param string|null $value
-     * @return self
+     * Update the cookie's value.
      */
     public function withValue(?string $value): self
     {
@@ -36,12 +31,9 @@ class CookieUpdater
     }
 
     /**
-     * Update the expiration time
-     *
-     * @param int|string|\DateTimeInterface $expire
-     * @return self
+     * Update the expiration time.
      */
-    public function withExpires($expire): self
+    public function withExpires(int|string|\DateTimeInterface $expire): self
     {
         $this->cookie = $this->cookie->withExpires($expire);
 
@@ -49,10 +41,7 @@ class CookieUpdater
     }
 
     /**
-     * Update the cookie path
-     *
-     * @param string $path
-     * @return self
+     * Update the cookie path.
      */
     public function withPath(string $path): self
     {
@@ -62,10 +51,7 @@ class CookieUpdater
     }
 
     /**
-     * Update the cookie domain
-     *
-     * @param string|null $domain
-     * @return self
+     * Update the cookie domain.
      */
     public function withDomain(?string $domain): self
     {
@@ -75,10 +61,7 @@ class CookieUpdater
     }
 
     /**
-     * Set whether the cookie is HTTPS-only
-     *
-     * @param bool $secure
-     * @return self
+     * Set whether the cookie is HTTPS-only.
      */
     public function withSecure(bool $secure = true): self
     {
@@ -88,10 +71,7 @@ class CookieUpdater
     }
 
     /**
-     * Set whether the cookie is HTTP-only
-     *
-     * @param bool $httpOnly
-     * @return self
+     * Set whether the cookie is HTTP-only.
      */
     public function withHttpOnly(bool $httpOnly = true): self
     {
@@ -101,11 +81,7 @@ class CookieUpdater
     }
 
     /**
-     * Set whether the cookie value should be raw
-     *
-     * @param bool $raw
-     * @return self
-     * @throws \InvalidArgumentException If cookie name contains invalid characters
+     * Set whether the cookie value should be raw.
      */
     public function withRaw(bool $raw = true): self
     {
@@ -115,11 +91,9 @@ class CookieUpdater
     }
 
     /**
-     * Set the SameSite attribute
+     * Set the SameSite attribute.
      *
-     * @param string|null $sameSite
-     * @return self
-     * @throws \InvalidArgumentException
+     * @param Cookie::SAMESITE_*|''|null $sameSite
      */
     public function withSameSite(?string $sameSite): self
     {
@@ -129,10 +103,7 @@ class CookieUpdater
     }
 
     /**
-     * Set whether the cookie is partitioned (CHIPS)
-     *
-     * @param bool $partitioned
-     * @return self
+     * Set whether the cookie is partitioned (CHIPS).
      */
     public function withPartitioned(bool $partitioned = true): self
     {
@@ -142,9 +113,7 @@ class CookieUpdater
     }
 
     /**
-     * Persist the modified cookie to the response
-     *
-     * @return bool
+     * Persist the modified cookie to the response.
      */
     public function update(): bool
     {

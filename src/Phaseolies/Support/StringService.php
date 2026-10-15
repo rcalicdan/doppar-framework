@@ -6,11 +6,6 @@ class StringService
 {
     /**
      * Extract a substring from the given input string.
-     *
-     * @param string $input
-     * @param int $start
-     * @param int|null $length (Optional)
-     * @return string
      */
     public function substr(string $input, int $start, ?int $length = null): string
     {
@@ -19,9 +14,6 @@ class StringService
 
     /**
      * Compute the length of the given string.
-     *
-     * @param string $input
-     * @return int
      */
     public function len(string $input): int
     {
@@ -30,9 +22,6 @@ class StringService
 
     /**
      * Count the number of words in a string.
-     *
-     * @param string $string
-     * @return int
      */
     public function countWord(string $string): int
     {
@@ -43,22 +32,16 @@ class StringService
 
     /**
      * Check if a given string is a palindrome.
-     *
-     * @param string $string
-     * @return bool
      */
     public function isPalindrome(string $string): bool
     {
-        $cleaned = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $string));
+        $cleaned = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $string) ?? '');
 
         return $cleaned === strrev($cleaned);
     }
 
     /**
      * Generate a random alphanumeric string of a given length.
-     *
-     * @param int $length
-     * @return string
      */
     public function random(int $length = 10): string
     {
@@ -66,12 +49,9 @@ class StringService
     }
 
     /**
-     * Convert a snake_case or kebab-case string to camelCase
-     *
-     * @param string $input
-     * @return string
+     * Convert a snake_case or kebab-case string to camelCase.
      */
-    function camel(string $input): string
+    public function camel(string $input): string
     {
         $input = str_replace(['-', '_'], ' ', $input);
         $input = mb_convert_case($input, MB_CASE_TITLE, 'UTF-8');
@@ -82,11 +62,6 @@ class StringService
 
     /**
      * Mask a string with a specified number of visible characters at the start and end.
-     *
-     * @param string $string
-     * @param int $visibleFromStart
-     * @param int $visibleFromEnd
-     * @param string
      */
     public function mask(string $string, int $visibleFromStart = 1, int $visibleFromEnd = 1, string $maskCharacter = '*'): string
     {
@@ -105,11 +80,6 @@ class StringService
 
     /**
      * Truncate a string to a specific length and append a suffix if truncated.
-     *
-     * @param string $string
-     * @param int $maxLength
-     * @param string $suffix
-     * @return string
      */
     public function truncate(string $string, int $maxLength, string $suffix = '...'): string
     {
@@ -118,20 +88,14 @@ class StringService
 
     /**
      * Convert a camelCase string to snake_case.
-     *
-     * @param string $input
-     * @return string
      */
     public function snake(string $input): string
     {
-        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $input));
+        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $input) ?? '');
     }
 
     /**
      * Convert a string to title case (each word capitalized).
-     *
-     * @param string $input
-     * @return string
      */
     public function title(string $input): string
     {
@@ -140,17 +104,13 @@ class StringService
 
     /**
      * Generate a URL-friendly slug from a string.
-     *
-     * @param string $input
-     * @param string $separator
-     * @return string
      */
     public function slug(string $input, string $separator = '-'): string
     {
         $slug = mb_strtolower($input, 'UTF-8');
-        $slug = preg_replace('/[\s,\.;\'"!\?]+/u', $separator, $slug);
-        $slug = preg_replace('/[^\p{L}\p{Nd}' . preg_quote($separator, '/') . ']+/u', '', $slug);
-        $slug = preg_replace('/' . preg_quote($separator, '/') . '{2,}/u', $separator, $slug);
+        $slug = preg_replace('/[\s,\.;\'"!\?]+/u', $separator, $slug) ?? '';
+        $slug = preg_replace('/[^\p{L}\p{Nd}' . preg_quote($separator, '/') . ']+/u', '', $slug) ?? '';
+        $slug = preg_replace('/' . preg_quote($separator, '/') . '{2,}/u', $separator, $slug) ?? '';
 
         return trim($slug, $separator);
     }
@@ -158,12 +118,9 @@ class StringService
     /**
      * Check if a string contains another string (case-insensitive or sensitive).
      *
-     * @param string $haystack
-     * @param string|array $needles
-     * @param bool $ignoreCase
-     * @return bool
+     * @param string|array<int, string> $needles
      */
-    public function contains(string $haystack, string | array $needles, bool $ignoreCase = true): bool
+    public function contains(string $haystack, string|array $needles, bool $ignoreCase = true): bool
     {
         if (is_array($needles)) {
             foreach ($needles as $needle) {
@@ -184,14 +141,8 @@ class StringService
     /**
      * Limit the number of words in a string, handling Unicode and preserving
      * natural word boundaries (splitting on whitespace).
-     *
-     * @param string $string
-     * @param int $words
-     * @param string $end
-     * @param string $encoding
-     * @return string
      */
-    function limitWords(string $string, int $words, string $end = '...', string $encoding = 'UTF-8'): string
+    public function limitWords(string $string, int $words, string $end = '...', string $encoding = 'UTF-8'): string
     {
         $trimmed = trim($string);
 
@@ -201,8 +152,7 @@ class StringService
 
         $wordArray = preg_split('/\s+/u', $trimmed);
 
-        // If the total number of words is less than or equal to $words, return original.
-        if (count($wordArray) <= $words) {
+        if ($wordArray === false || count($wordArray) <= $words) {
             return $string;
         }
 
@@ -213,10 +163,6 @@ class StringService
 
     /**
      * Determine if a string matches a given pattern.
-     *
-     * @param string $pattern
-     * @param string $value
-     * @return bool
      */
     public function is(string $pattern, string $value): bool
     {
@@ -232,21 +178,14 @@ class StringService
 
     /**
      * Remove all whitespace from a string.
-     *
-     * @param string $input
-     * @return string
      */
     public function removeWhiteSpace(string $input): string
     {
-        // Use a Unicode‐aware regex to strip any sequence of whitespace characters.
-        // The 'u' modifier ensures proper handling of multibyte (UTF‐8) input.
         return preg_replace('/\s+/u', '', $input) ?? '';
     }
 
     /**
      * Generate a UUID v4 string.
-     *
-     * @return string The generated UUID.
      */
     public function uuid(): string
     {
@@ -266,21 +205,15 @@ class StringService
     /**
      * Check if a string starts with one or more given needles (case-sensitive).
      *
-     * @param string $haystack
-     * @param string|array $needles
-     * @return bool
+     * @param string|array<int, string> $needles
      */
-    public function startsWith(string $haystack, string | array $needles): bool
+    public function startsWith(string $haystack, string|array $needles): bool
     {
-        // Cast $needles to an array so we can handle a single string or multiple needles uniformly.
         foreach ((array) $needles as $needle) {
-            // Skip empty needles (""), since every string technically starts with an empty string.
             if ($needle === '') {
                 continue;
             }
 
-            // mb_strpos returns the position of the first occurrence of $needle in $haystack.
-            // If that position is exactly 0, $haystack begins with $needle.
             if (mb_strpos($haystack, $needle, 0, 'UTF-8') === 0) {
                 return true;
             }
@@ -291,20 +224,14 @@ class StringService
 
     /**
      * Check if a string ends with one or more given needles (case‐sensitive).
-     * This version is Unicode‐safe (works with any UTF‐8 text).
      *
-     * @param string $haystack
-     * @param string|array $needles
-     * @param string $encoding
-     * @return bool
+     * @param string|array<int, string> $needles
      */
-    public function endsWith(string $haystack, string | array $needles, string $encoding = 'UTF-8'): bool
+    public function endsWith(string $haystack, string|array $needles, string $encoding = 'UTF-8'): bool
     {
         $haystackLength = mb_strlen($haystack, $encoding);
 
-        // Cast needles to array so we can loop uniformly.
         foreach ((array) $needles as $needle) {
-            // Skip empty needle—every string “ends” with an empty string, but we usually don’t want to count that.
             if ($needle === '') {
                 continue;
             }
@@ -327,60 +254,35 @@ class StringService
 
     /**
      * Convert a string to StudlyCase (each “word” capitalized, no separators).
-     *
-     * @param string $input
-     * @param string $encoding
-     * @return string
      */
     public function studly(string $input, string $encoding = 'UTF-8'): string
     {
         $spaced = str_replace(['-', '_'], ' ', $input);
-
         $titled = mb_convert_case($spaced, MB_CASE_TITLE, $encoding);
 
-        $studly = str_replace(' ', '', $titled);
-
-        return $studly;
+        return str_replace(' ', '', $titled);
     }
 
     /**
      * Reverse a UTF-8 string while preserving multi-byte characters.
-     *
-     * @param string $input
-     * @param string $encoding
-     * @return string
      */
     public function reverse(string $input, string $encoding = 'UTF-8'): string
     {
-        if (function_exists('mb_str_split')) {
-            $chars = mb_str_split($input, 1, $encoding);
-        } else {
-            $chars = preg_split('/(?<!^)(?!$)/u', $input);
-            if ($chars === false) {
-                return $input;
-            }
-        }
+        $chars = mb_str_split($input, 1, $encoding);
 
         return implode('', array_reverse($chars));
     }
 
     /**
      * Extract all numeric digits from a string.
-     *
-     * @param string $input
-     * @return string
      */
     public function extractNumbers(string $input): string
     {
-        return preg_replace('/\D/', '', $input);
+        return preg_replace('/\D/', '', $input) ?? '';
     }
 
     /**
      * Find the longest common substring between two strings.
-     *
-     * @param string $str1
-     * @param string $str2
-     * @return string
      */
     public function longestCommonSubstring(string $str1, string $str2): string
     {
@@ -405,9 +307,6 @@ class StringService
 
     /**
      * Convert a string to leetspeak (1337).
-     *
-     * @param string $input
-     * @return string
      */
     public function leetSpeak(string $input): string
     {
@@ -426,23 +325,17 @@ class StringService
     /**
      * Extract all email addresses from a string.
      *
-     * @param string $input
-     * @return array
+     * @return list<string>
      */
     public function extractEmails(string $input): array
     {
         preg_match_all('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $input, $matches);
 
-        return $matches[0] ?? [];
+        return $matches[0];
     }
 
     /**
      * Highlight all occurrences of a keyword in a string using HTML tags.
-     *
-     * @param string $input
-     * @param string $keyword
-     * @param string $tag
-     * @return string
      */
     public function highlightKeyword(string $input, string $keyword, string $tag = 'strong'): string
     {
@@ -454,14 +347,11 @@ class StringService
             '/(' . preg_quote($keyword, '/') . ')/i',
             "<$tag>$1</$tag>",
             $input
-        );
+        ) ?? $input;
     }
 
     /**
-     * Convert string to uppercase
-     *
-     * @param string $input
-     * @return string
+     * Convert string to uppercase.
      */
     public function toUpper(string $input): string
     {
@@ -470,15 +360,15 @@ class StringService
 
     /**
      * Append a suffix to a string if it doesn't already end with it.
-     *
-     * @param string $input
-     * @param string $suffix
-     * @return string
      */
     public function suffixAppend(string $input, string $suffix): string
     {
-        if (str()->endsWith($input, $suffix)) {
+        if ($this->endsWith($input, $suffix)) {
             return $input;
+        }
+
+        if ($input === '') {
+            return $suffix;
         }
 
         return strtoupper($input[0]) . substr($input, 1) . $suffix;
@@ -486,10 +376,6 @@ class StringService
 
     /**
      * Remove a suffix from a string.
-     *
-     * @param string $input
-     * @param string $suffix
-     * @return string
      */
     public function removeSuffix(string $input, string $suffix): string
     {
@@ -498,10 +384,6 @@ class StringService
 
     /**
      * Get the portion of $subject after the first occurrence of $search.
-     * 
-     * @param string $subject
-     * @param string $search
-     * @return string
      */
     public function after(string $subject, string $search): string
     {
@@ -516,10 +398,6 @@ class StringService
 
     /**
      * Get the portion of $subject before the first occurrence of $search.
-     * 
-     * @param string $subject
-     * @param string $search
-     * @return string
      */
     public function before(string $subject, string $search): string
     {
@@ -534,11 +412,6 @@ class StringService
 
     /**
      * Get the portion between two values.
-     * 
-     * @param string $subject
-     * @param string $from
-     * @param string $to
-     * @return string
      */
     public function between(string $subject, string $from, string $to): string
     {
@@ -548,9 +421,6 @@ class StringService
 
     /**
      * Determine if a given string is valid JSON.
-     *
-     * @param string $value
-     * @return bool
      */
     public function isJson(string $value): bool
     {
@@ -558,16 +428,11 @@ class StringService
             return false;
         }
 
-        json_decode($value);
-
-        return json_last_error() === JSON_ERROR_NONE;
+        return json_validate($value);
     }
 
     /**
-     * Harmonize the given URL
-     *
-     * @param string $url
-     * @return string
+     * Harmonize the given URL.
      */
     public function urlHarmonize(string $url): string
     {
