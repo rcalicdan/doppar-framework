@@ -7,10 +7,7 @@ class IndexDefinition
     /**
      * Create a new table level index definition.
      *
-     * @param string $type index|unique|fulltext|spatial|primary
-     * @param array $columns
-     * @param string|null $name
-     * @param string|null $algorithm
+     * @param array<int, string> $columns
      */
     public function __construct(
         public string $type,
@@ -22,9 +19,6 @@ class IndexDefinition
 
     /**
      * Set a custom name for the index.
-     *
-     * @param string $name
-     * @return self
      */
     public function name(string $name): self
     {
@@ -35,9 +29,6 @@ class IndexDefinition
 
     /**
      * Set the index algorithm (e.g. btree, hash, gin, gist).
-     *
-     * @param string $algorithm
-     * @return self
      */
     public function algorithm(string $algorithm): self
     {

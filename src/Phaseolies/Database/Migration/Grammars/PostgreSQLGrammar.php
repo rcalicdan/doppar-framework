@@ -7,11 +7,9 @@ use Phaseolies\Database\Migration\ColumnDefinition;
 class PostgreSQLGrammar extends Grammar
 {
     /**
-     * Get the SQL data type definition for a given column
-     *
-     * @param ColumnDefinition $column
-     * @return string
+     * Get the SQL data type definition for a given column.
      */
+    #[\Override]
     public function getTypeDefinition(ColumnDefinition $column): string
     {
         $type = $this->mapType($column->type, $column->attributes);
@@ -24,12 +22,7 @@ class PostgreSQLGrammar extends Grammar
         return $type . $this->compileTypeSuffix($column);
     }
 
-    /**
-     * Collation names are case sensitive in PostgreSQL and must be quoted.
-     *
-     * @param string $collation
-     * @return string
-     */
+    #[\Override]
     protected function formatCollation(string $collation): string
     {
         return $this->quoteIdentifier($this->safeKeyword($collation));
@@ -37,9 +30,6 @@ class PostgreSQLGrammar extends Grammar
 
     /**
      * Get the SERIAL type backing an incrementing column.
-     *
-     * @param string $type
-     * @return string
      */
     protected function serialType(string $type): string
     {
@@ -50,9 +40,13 @@ class PostgreSQLGrammar extends Grammar
         };
     }
 
+    /**
+     * @return array<int, string>
+     */
+    #[\Override]
     public function compileColumnComment(string $table, ColumnDefinition $column): array
     {
-        if (!isset($column->attributes['comment'])) {
+        if (!isset($column->attributes['comment']) || !is_string($column->attributes['comment'])) {
             return [];
         }
 
@@ -60,9 +54,13 @@ class PostgreSQLGrammar extends Grammar
             . $this->quoteString($column->attributes['comment'])];
     }
 
+    /**
+     * @return array<int, string>
+     */
+    #[\Override]
     public function compileTableOptionStatements(string $table): array
     {
-        if (!isset($this->tableOptions['comment'])) {
+        if (!isset($this->tableOptions['comment']) || !is_string($this->tableOptions['comment'])) {
             return [];
         }
 
@@ -70,13 +68,12 @@ class PostgreSQLGrammar extends Grammar
     }
 
     /**
-     * Compile a SQL CREATE TABLE statement
+     * Compile a SQL CREATE TABLE statement.
      *
-     * @param string $table
-     * @param array $columns
-     * @param array $primaryKeys
-     * @return string
+     * @param array<int, ColumnDefinition> $columns
+     * @param array<int, string> $primaryKeys
      */
+    #[\Override]
     public function compileCreateTable(string $table, array $columns, array $primaryKeys = []): string
     {
         $columnDefinitions = [];
@@ -93,7 +90,6 @@ class PostgreSQLGrammar extends Grammar
                 );
                 $primaryKeyColumns[] = trim($column->name, '"');
             } elseif ($column->type === 'uuid' && !empty($column->attributes['primary'])) {
-                // UUID primary key with auto-generation
                 $columnSql = sprintf(
                     '"%s" UUID NOT NULL DEFAULT gen_random_uuid()',
                     $column->name
@@ -114,44 +110,28 @@ class PostgreSQLGrammar extends Grammar
         return $this->createTableKeyword() . " \"{$table}\" (" . implode(', ', $columnDefinitions) . $primaryKeySql . ')';
     }
 
-    /**
-     * Compile a SQL statement to add a new column to an existing table
-     *
-     * @param string $table
-     * @param string $columnSql
-     * @return string
-     */
+    #[\Override]
     public function compileAddColumn(string $table, string $columnSql): string
     {
         return "ALTER TABLE \"{$table}\" ADD COLUMN {$columnSql}";
     }
 
-    /**
-     * Compile a SQL statement to create a non-unique index on a column
-     *
-     * @param string $table
-     * @param string $column
-     * @param string|null $name
-     * @return string
-     */
+    #[\Override]
     public function compileCreateIndex(string $table, string $column, ?string $name = null): string
     {
         return $this->compileCreateIndexSql($table, $name ?? $this->indexName($table, [$column]), [$column]);
     }
 
-    /**
-     * Compile a SQL statement to add a unique constraint on a column
-     *
-     * @param string $table
-     * @param string $column
-     * @param string|null $name
-     * @return string
-     */
+    #[\Override]
     public function compileCreateUnique(string $table, string $column, ?string $name = null): string
     {
         return $this->compileCreateUniqueSql($table, $name ?? $this->indexName($table, [$column], 'unique'), [$column]);
     }
 
+    /**
+     * @param array<int, string> $columns
+     */
+    #[\Override]
     protected function compileFullTextIndex(string $table, string $name, array $columns): string
     {
         $vector = implode(" || ' ' || ", array_map(
@@ -163,22 +143,32 @@ class PostgreSQLGrammar extends Grammar
             . "USING GIN (to_tsvector('english', {$vector}))";
     }
 
+    /**
+     * @param array<int, string> $columns
+     */
+    #[\Override]
     protected function compileSpatialIndex(string $table, string $name, array $columns): string
     {
         return "CREATE INDEX {$this->quoteIdentifier($name)} ON {$this->quoteIdentifier($table)} "
             . "USING GIST ({$this->quoteColumns($columns)})";
     }
 
+    #[\Override]
     protected function compileDropPrimary(string $table): string
     {
         return "ALTER TABLE {$this->quoteIdentifier($table)} DROP CONSTRAINT {$this->quoteIdentifier($table . '_pkey')}";
     }
 
+    #[\Override]
     public function compileRenameIndex(string $table, string $from, string $to): string
     {
         return "ALTER INDEX {$this->quoteIdentifier($from)} RENAME TO {$this->quoteIdentifier($to)}";
     }
 
+    /**
+     * @return array<int, string>
+     */
+    #[\Override]
     public function compileChangeColumn(string $table, ColumnDefinition $column): array
     {
         $t = $this->quoteIdentifier($table);
@@ -208,53 +198,42 @@ class PostgreSQLGrammar extends Grammar
         return array_merge($statements, $this->compileColumnComment($table, $column));
     }
 
+    #[\Override]
     public function compileGetColumns(): string
     {
         return 'SELECT column_name FROM information_schema.columns '
             . 'WHERE table_schema = current_schema() AND table_name = ? ORDER BY ordinal_position';
     }
 
+    #[\Override]
     public function compileGetIndexes(): string
     {
         return 'SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename = ?';
     }
 
-    /**
-     * Determine if the current database supports column ordering
-     *
-     * @return bool
-     */
+    #[\Override]
     public function supportsColumnOrdering(): bool
     {
         return true;
     }
 
-    /**
-     * PostgreSQL supports adding a primary key
-     *
-     * @return bool
-     */
+    #[\Override]
     public function supportsAddingPrimaryKey(): bool
     {
         return true;
     }
 
     /**
-     * Map abstract column types to PostgreSQL-specific SQL type definitions
+     * Map abstract column types to PostgreSQL-specific SQL type definitions.
      *
-     * @param string $type
-     * @param array $attributes
-     * @return string
+     * @param array<string, mixed> $attributes
      */
     protected function mapType(string $type, array $attributes): string
     {
-        // Handle special cases that require attributes first
         switch ($type) {
             case 'enum':
-                // For PostgreSQL, enums are handled differently - use text with check constraint
                 return $this->createEnumType($attributes);
             case 'set':
-                // PostgreSQL doesn't have SET type, use array or text with check constraint
                 return 'TEXT[]';
             case 'string':
                 return 'VARCHAR(' . ($attributes['length'] ?? 255) . ')';
@@ -291,7 +270,6 @@ class PostgreSQLGrammar extends Grammar
                 return 'JSONB';
         }
 
-        // Standard type mappings
         $map = [
             'id' => 'BIGSERIAL',
             'bigIncrements' => 'BIGSERIAL',
@@ -308,11 +286,11 @@ class PostgreSQLGrammar extends Grammar
             'boolean' => 'BOOLEAN',
             'json' => 'JSON',
             'integer' => 'INTEGER',
-            'tinyInteger' => 'SMALLINT', // PostgreSQL doesn't have TINYINT
+            'tinyInteger' => 'SMALLINT',
             'smallInteger' => 'SMALLINT',
             'mediumInteger' => 'INTEGER',
             'bigInteger' => 'BIGINT',
-            'unsignedInteger' => 'INTEGER', // PostgreSQL doesn't have UNSIGNED, use check constraints
+            'unsignedInteger' => 'INTEGER',
             'unsignedTinyInteger' => 'SMALLINT',
             'unsignedSmallInteger' => 'SMALLINT',
             'unsignedMediumInteger' => 'INTEGER',
@@ -347,10 +325,7 @@ class PostgreSQLGrammar extends Grammar
     }
 
     /**
-     * Get the fractional seconds precision suffix, e.g. (3).
-     *
-     * @param array $attributes
-     * @return string
+     * @param array<string, mixed> $attributes
      */
     protected function getTimePrecision(array $attributes): string
     {
@@ -358,10 +333,7 @@ class PostgreSQLGrammar extends Grammar
     }
 
     /**
-     * Create an ENUM type definition for 
-     *
-     * @param array $attributes
-     * @return string
+     * @param array<string, mixed> $attributes
      */
     protected function createEnumType(array $attributes): string
     {
@@ -370,34 +342,16 @@ class PostgreSQLGrammar extends Grammar
         return 'TEXT';
     }
 
-    /**
-     * Compile a statement to create a schema
-     *
-     * @param string $schema
-     * @return string
-     */
     public function compileCreateSchema(string $schema): string
     {
         return "CREATE SCHEMA IF NOT EXISTS \"{$schema}\"";
     }
 
-    /**
-     * Compile a statement to drop a schema
-     *
-     * @param string $schema
-     * @return string
-     */
     public function compileDropSchema(string $schema): string
     {
         return "DROP SCHEMA IF EXISTS \"{$schema}\" CASCADE";
     }
 
-    /**
-     * Compile a statement to set the search path
-     *
-     * @param string $schema
-     * @return string
-     */
     public function compileSetSearchPath(string $schema): string
     {
         return "SET search_path TO \"{$schema}\"";

@@ -7,19 +7,27 @@ use PDO;
 
 class ColumnDefinition
 {
-    /** @var string The name of the column */
+    /**
+     * The name of the column.
+     */
     public string $name;
 
-    /** @var string The data type of the column */
+    /**
+     * The data type of the column.
+     */
     public string $type;
 
-    /** @var array Additional attributes/constraints for the column */
+    /**
+     * Additional attributes/constraints for the column
+     * 
+     * @var array<string, mixed>
+     */
     public array $attributes = [];
 
     /**
      * Create a new column definition instance.
      *
-     * @param array $attributes
+     * @param array<string, mixed> $attributes
      */
     public function __construct(array $attributes = [])
     {
@@ -30,9 +38,6 @@ class ColumnDefinition
 
     /**
      * Set the column as nullable (allowing NULL values).
-     *
-     * @param bool $value
-     * @return self
      */
     public function nullable(bool $value = true): self
     {
@@ -43,11 +48,8 @@ class ColumnDefinition
 
     /**
      * Set a default value for the column.
-     *
-     * @param mixed $value
-     * @return self
      */
-    public function default($value): self
+    public function default(mixed $value): self
     {
         $driver = $this->getDriver();
 
@@ -62,9 +64,6 @@ class ColumnDefinition
 
     /**
      * Set the column as unique, optionally with a custom constraint name.
-     *
-     * @param string|null $name
-     * @return self
      */
     public function unique(?string $name = null): self
     {
@@ -75,9 +74,6 @@ class ColumnDefinition
 
     /**
      * Set the column to be indexed, optionally with a custom index name.
-     *
-     * @param string|null $name
-     * @return self
      */
     public function index(?string $name = null): self
     {
@@ -88,9 +84,6 @@ class ColumnDefinition
 
     /**
      * Add a full text index on the column.
-     *
-     * @param string|null $name
-     * @return self
      */
     public function fullText(?string $name = null): self
     {
@@ -101,9 +94,6 @@ class ColumnDefinition
 
     /**
      * Add a spatial index on the column.
-     *
-     * @param string|null $name
-     * @return self
      */
     public function spatialIndex(?string $name = null): self
     {
@@ -114,8 +104,6 @@ class ColumnDefinition
 
     /**
      * Set the column as primary key.
-     *
-     * @return self
      */
     public function primary(): self
     {
@@ -125,10 +113,7 @@ class ColumnDefinition
     }
 
     /**
-     * Set the column for after a column
-     *
-     * @param string $column
-     * @return self
+     * Set the column for after a column.
      */
     public function after(string $column): self
     {
@@ -139,8 +124,6 @@ class ColumnDefinition
 
     /**
      * Place the column first in the table (MySQL, ALTER TABLE only).
-     *
-     * @return self
      */
     public function first(): self
     {
@@ -151,9 +134,6 @@ class ColumnDefinition
 
     /**
      * Add a comment to the column (MySQL and PostgreSQL).
-     *
-     * @param string $comment
-     * @return self
      */
     public function comment(string $comment): self
     {
@@ -164,8 +144,6 @@ class ColumnDefinition
 
     /**
      * Mark a numeric column as UNSIGNED (MySQL only, ignored elsewhere).
-     *
-     * @return self
      */
     public function unsigned(): self
     {
@@ -176,8 +154,6 @@ class ColumnDefinition
 
     /**
      * Use CURRENT_TIMESTAMP as the column default.
-     *
-     * @return self
      */
     public function useCurrent(): self
     {
@@ -188,8 +164,6 @@ class ColumnDefinition
 
     /**
      * Refresh the column with CURRENT_TIMESTAMP on every update (MySQL only).
-     *
-     * @return self
      */
     public function useCurrentOnUpdate(): self
     {
@@ -200,8 +174,6 @@ class ColumnDefinition
 
     /**
      * Make an integer column auto-incrementing (it must also be a key in MySQL).
-     *
-     * @return self
      */
     public function autoIncrement(): self
     {
@@ -212,9 +184,6 @@ class ColumnDefinition
 
     /**
      * Set the character set of the column (MySQL only).
-     *
-     * @param string $charset
-     * @return self
      */
     public function charset(string $charset): self
     {
@@ -225,9 +194,6 @@ class ColumnDefinition
 
     /**
      * Set the collation of the column.
-     *
-     * @param string $collation
-     * @return self
      */
     public function collation(string $collation): self
     {
@@ -238,9 +204,6 @@ class ColumnDefinition
 
     /**
      * Create a stored generated column from the given SQL expression.
-     *
-     * @param string $expression
-     * @return self
      */
     public function storedAs(string $expression): self
     {
@@ -251,9 +214,6 @@ class ColumnDefinition
 
     /**
      * Create a virtual generated column from the given SQL expression.
-     *
-     * @param string $expression
-     * @return self
      */
     public function virtualAs(string $expression): self
     {
@@ -264,8 +224,6 @@ class ColumnDefinition
 
     /**
      * Hide the column from SELECT * (MySQL 8+ only).
-     *
-     * @return self
      */
     public function invisible(): self
     {
@@ -276,10 +234,6 @@ class ColumnDefinition
 
     /**
      * Modify the existing column to match this definition (Schema::table only).
-     * Every attribute must be restated: anything not declared, such as
-     * nullable() or default(), is reset to the column default.
-     *
-     * @return self
      */
     public function change(): self
     {
@@ -290,8 +244,6 @@ class ColumnDefinition
 
     /**
      * Get the SQL for the DEFAULT value, or null when none is set.
-     *
-     * @return string|null
      */
     public function getDefaultSql(): ?string
     {
@@ -311,17 +263,12 @@ class ColumnDefinition
 
     /**
      * Convert the column definition to its SQL representation.
-     *
-     * @return string
      */
     public function toSql(): string
     {
         $grammar = $this->getGrammar();
         $sql = $this->name . ' ' . $grammar->getTypeDefinition($this);
 
-        // Add PRIMARY KEY inline when altering, or when the grammar wants it
-        // there; otherwise the grammar emits a table level PRIMARY KEY clause
-        // (so composite and table level primary keys never conflict with it).
         if (
             !empty($this->attributes['primary']) &&
             ($grammar->shouldAddPrimaryInColumnDefinition() || !empty($this->attributes['altering']))
@@ -329,7 +276,6 @@ class ColumnDefinition
             $sql .= ' PRIMARY KEY';
         }
 
-        // Add UNIQUE constraint if grammar requires it in column definition.
         if (
             !empty($this->attributes['unique']) &&
             $grammar->shouldAddUniqueInColumnDefinition() &&
@@ -338,14 +284,12 @@ class ColumnDefinition
             $sql .= ' UNIQUE';
         }
 
-        // Add NULL/NOT NULL constraint
         if (isset($this->attributes['nullable']) && $this->attributes['nullable']) {
             $sql .= ' NULL';
         } else {
             $sql .= ' NOT NULL';
         }
 
-        // Add DEFAULT value if specified (generated columns cannot have one)
         $default = $this->getDefaultSql();
 
         if ($default !== null && !isset($this->attributes['storedAs']) && !isset($this->attributes['virtualAs'])) {
@@ -367,8 +311,6 @@ class ColumnDefinition
 
     /**
      * Get the appropriate grammar instance based on the database driver.
-     *
-     * @return Grammars\Grammar
      */
     protected function getGrammar(): Grammars\Grammar
     {
@@ -383,9 +325,7 @@ class ColumnDefinition
     }
 
     /**
-     * Get the current PDO driver
-     *
-     * @return string
+     * Get the current PDO driver.
      */
     public function getDriver(): string
     {

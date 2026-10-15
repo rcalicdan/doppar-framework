@@ -8,40 +8,34 @@ use Phaseolies\Support\Facades\DB;
 class Migrator
 {
     /**
-     * Path to the directory containing migration files
-     *
-     * @var string
+     * Path to the directory containing migration files.
      */
     protected string $migrationPath;
 
     /**
-     * Migration repository instance for tracking run migrations
-     *
-     * @var MigrationRepository
+     * Migration repository instance for tracking run migrations.
      */
     protected MigrationRepository $repository;
 
     /**
-     * @var array
+     * The registered migrations.
+     *
+     * @var array<string, Migration>
      */
-    protected $migrations = [];
+    protected array $migrations = [];
 
     /**
-     * @var array
+     * The paths to package migration files.
+     *
+     * @var array<int, string>
      */
     protected array $migrationPaths = [];
 
     /**
-     * The database connection name this migration should use
-     *
-     * @var string|null
+     * The database connection name this migration should use.
      */
     protected ?string $connection = null;
 
-    /**
-     * @param MigrationRepository $repository
-     * @param string $migrationPath
-     */
     public function __construct(MigrationRepository $repository, string $migrationPath)
     {
         $this->repository = $repository;
@@ -49,10 +43,7 @@ class Migrator
     }
 
     /**
-     * Add a migration to the migrator
-     *
-     * @param string $file
-     * @param Migration $migration
+     * Add a migration to the migrator.
      */
     public function addMigration(string $file, Migration $migration): void
     {
@@ -61,36 +52,26 @@ class Migrator
     }
 
     /**
-     * Run all pending migrations
+     * Run all pending migrations.
      *
-     * Options:
-     *  - step (bool):      give every migration its own batch so each can be rolled back on its own
-     *  - pretend (bool):   do not run anything, report the SQL each migration would execute
-     *  - progress (callable): fn(string $event, string $migration, array $info) for 'running',
-     *                      'ran' (info: time in ms) and 'pretend' (info: queries)
-     *
-     * @param string $connection
-     * @param string|null $path
-     * @param array $options
-     * @return array The names of the migrations that ran
+     * @param array<string, mixed> $options
+     * @return array<int, string> The names of the migrations that ran
      */
     public function run(string $connection, ?string $path = null, array $options = []): array
     {
-        $connection = $connection ?? config('database.default');
+        $conn = $connection !== '' ? $connection : (string) config('database.default');
         $pretend = (bool) ($options['pretend'] ?? false);
 
-        $execute = function () use ($connection, $path, $options, $pretend) {
-            // Pretending must not touch the database, so the tracking table is left alone.
+        $execute = function () use ($conn, $path, $options, $pretend): array {
             if (!$pretend) {
-                $this->ensureMigrationTableExists($connection);
+                $this->ensureMigrationTableExists($conn);
             }
 
-            $executed = $this->getPendingMigrations($connection, $path);
-
-            $batch = $this->repository->getNextBatchNumber($connection);
+            $executed = $this->getPendingMigrations($conn, $path);
+            $batch = $this->repository->getNextBatchNumber($conn);
 
             foreach ($executed as $file) {
-                $this->runMigration($file, $connection, $batch, $options);
+                $this->runMigration($file, $conn, $batch, $options);
 
                 if (!empty($options['step'])) {
                     $batch++;
@@ -100,29 +81,21 @@ class Migrator
             return $executed;
         };
 
-        return $pretend ? $execute() : $this->withLock($connection, $execute);
+        return $pretend ? $execute() : $this->withLock($conn, $execute);
     }
 
     /**
-     * Roll back migrations. By default the most recent batch is reverted.
+     * Roll back migrations.
      *
-     * Options:
-     *  - step (int):       roll back the last N migrations regardless of batch
-     *  - batch (int):      roll back one specific batch
-     *  - pretend (bool):   report the SQL without running it
-     *  - progress (callable): fn(string $event, string $migration, array $info) for
-     *                      'rolling_back', 'rolled_back' and 'pretend'
-     *
-     * @param string $connection
-     * @param array $options
-     * @return array The names of the migrations that were rolled back
-     * @throws \RuntimeException When a migration to roll back has no file on disk
+     * @param array<string, mixed> $options
+     * @return array<int, string>
+     * @throws \RuntimeException
      */
     public function rollback(string $connection, array $options = []): array
     {
         $pretend = (bool) ($options['pretend'] ?? false);
 
-        $execute = function () use ($connection, $options) {
+        $execute = function () use ($connection, $options): array {
             if (!$this->repository->exists($connection)) {
                 return [];
             }
@@ -133,7 +106,6 @@ class Migrator
                 isset($options['batch']) ? (int) $options['batch'] : null
             );
 
-            // Resolve everything first so a missing file aborts before anything is reverted.
             $migrations = [];
             foreach ($names as $name) {
                 $migrations[$name] = $this->resolveMigration($name, $connection, true);
@@ -150,11 +122,10 @@ class Migrator
     }
 
     /**
-     * Roll back every migration that has run
+     * Roll back every migration that has run.
      *
-     * @param string $connection
-     * @param array $options Same as rollback()
-     * @return array
+     * @param array<string, mixed> $options
+     * @return array<int, string>
      */
     public function reset(string $connection, array $options = []): array
     {
@@ -165,18 +136,16 @@ class Migrator
     }
 
     /**
-     * Describe every known migration: whether it ran, in which batch, how long
-     * it took, and whether its file changed or disappeared since it ran.
+     * Describe every known migration.
      *
-     * @param string|null $connection
      * @return array<int, array{migration: string, ran: bool, batch: ?int, ran_at: ?string, execution_time: ?int, modified: bool, missing: bool}>
      */
     public function status(?string $connection = null): array
     {
-        $connection = $connection ?? config('database.default');
+        $conn = $connection ?? (string) config('database.default');
 
-        $files = $this->migrationFiles($connection);
-        $records = $this->repository->getRecords($connection);
+        $files = $this->migrationFiles($conn);
+        $records = $this->repository->getRecords($conn);
 
         $rows = [];
 
@@ -218,18 +187,15 @@ class Migrator
     }
 
     /**
-     * Get the names of the migrations that have not run yet
+     * Get the names of the migrations that have not run yet.
      *
-     * @param string $connection
-     * @param string|null $path Restrict to one migration file
-     * @return array
+     * @return array<int, string>
      */
     public function getPendingMigrations(string $connection, ?string $path = null): array
     {
         $files = $this->getMigrationFiles($connection);
         $ran = $this->repository->getRan($connection);
 
-        $localMigrations = [];
         $vendorMigrations = [];
 
         foreach ($files as $file) {
@@ -237,12 +203,10 @@ class Migrator
 
             if (str_contains($normalized, '/vendor/')) {
                 $vendorMigrations[basename($file)] = $file;
-            } else {
-                $localMigrations[basename($file)] = $file;
             }
         }
 
-        $fileNames = array_map('basename', array_merge($files));
+        $fileNames = array_map('basename', $files);
         $migrations = array_diff($fileNames, $ran);
 
         foreach ($vendorMigrations as $basename => $vendorPath) {
@@ -276,7 +240,6 @@ class Migrator
             $fullPath = is_file($file) ? $file : $this->migrationPath . DIRECTORY_SEPARATOR . $file;
 
             if (!is_file($fullPath)) {
-                echo "Migration file not found: {$file}\n\n";
                 continue;
             }
 
@@ -288,10 +251,7 @@ class Migrator
     }
 
     /**
-     * Ensure the migration tracking table exists in the database
-     *
-     * @param string|null $connection
-     * @return void
+     * Ensure the migration tracking table exists in the database.
      */
     protected function ensureMigrationTableExists(?string $connection = null): void
     {
@@ -305,28 +265,21 @@ class Migrator
     }
 
     /**
-     * Get all migration files from the migration path
+     * Get all migration files from the migration path.
      *
-     * @param string|null $connection
-     * @return array
+     * @return array<int, string>
      */
     public function getMigrationFiles(?string $connection = null): array
     {
-        $connection = $connection ?? config('database.default');
+        $conn = $connection ?? (string) config('database.default');
 
         $files = glob($this->migrationPath . '/*.php') ?: [];
-        $packageMigrations = $this->migrationPaths ?: [];
+        $packageMigrations = $this->migrationPaths;
 
-        // Normalize vendor migrations to full paths if needed
         $normalizedPackages = array_map(function ($file) {
             return is_file($file) ? $file : (base_path($file));
         }, $packageMigrations);
 
-        /**
-         * 🧠 Build a map by basename so project migrations override vendor ones
-         * Example:
-         *   2025_10_11_000001_create_users_table.php → pick from schema/migrations if exists
-         */
         $migrationMap = [];
 
         foreach ($normalizedPackages as $vendorFile) {
@@ -340,7 +293,6 @@ class Migrator
         }
 
         $allFiles = array_values($migrationMap);
-
         $filtered = [];
 
         foreach ($allFiles as $path) {
@@ -369,7 +321,7 @@ class Migrator
                 $migrationConnection = config('database.default');
             }
 
-            if ($migrationConnection === $connection) {
+            if ($migrationConnection === $conn) {
                 $filtered[] = $path;
             }
         }
@@ -378,13 +330,9 @@ class Migrator
     }
 
     /**
-     * Run a single migration file
+     * Run a single migration file.
      *
-     * @param string $file
-     * @param string $connection
-     * @param int $batch
-     * @param array $options
-     * @return void
+     * @param array<string, mixed> $options
      * @throws \RuntimeException
      */
     protected function runMigration(string $file, string $connection, int $batch, array $options = []): void
@@ -394,12 +342,16 @@ class Migrator
 
         if (!empty($options['pretend'])) {
             $queries = Database::pretend(fn() => $migration->up());
-            $progress && $progress('pretend', $file, ['queries' => $queries]);
+            if ($progress && is_callable($progress)) {
+                $progress('pretend', $file, ['queries' => $queries]);
+            }
 
             return;
         }
 
-        $progress && $progress('running', $file, []);
+        if ($progress && is_callable($progress)) {
+            $progress('running', $file, []);
+        }
 
         $elapsed = 0;
 
@@ -415,17 +367,15 @@ class Migrator
             throw new \RuntimeException("Migration {$file} failed: " . $e->getMessage(), (int) $e->getCode(), $e);
         }
 
-        $progress && $progress('ran', $file, ['time' => $elapsed]);
+        if ($progress && is_callable($progress)) {
+            $progress('ran', $file, ['time' => $elapsed]);
+        }
     }
 
     /**
-     * Revert a single migration and forget its record
+     * Revert a single migration and forget its record.
      *
-     * @param string $file
-     * @param Migration $migration
-     * @param string $connection
-     * @param array $options
-     * @return void
+     * @param array<string, mixed> $options
      * @throws \RuntimeException
      */
     protected function rollbackMigration(string $file, Migration $migration, string $connection, array $options = []): void
@@ -434,12 +384,16 @@ class Migrator
 
         if (!empty($options['pretend'])) {
             $queries = Database::pretend(fn() => $migration->down());
-            $progress && $progress('pretend', $file, ['queries' => $queries]);
+            if ($progress && is_callable($progress)) {
+                $progress('pretend', $file, ['queries' => $queries]);
+            }
 
             return;
         }
 
-        $progress && $progress('rolling_back', $file, []);
+        if ($progress && is_callable($progress)) {
+            $progress('rolling_back', $file, []);
+        }
 
         $elapsed = 0;
 
@@ -455,21 +409,13 @@ class Migrator
             throw new \RuntimeException("Rolling back {$file} failed: " . $e->getMessage(), (int) $e->getCode(), $e);
         }
 
-        $progress && $progress('rolled_back', $file, ['time' => $elapsed]);
+        if ($progress && is_callable($progress)) {
+            $progress('rolled_back', $file, ['time' => $elapsed]);
+        }
     }
 
     /**
      * Run a callback atomically when the driver can roll back schema changes.
-     *
-     * PostgreSQL and SQLite support transactional DDL, so a migration that
-     * fails halfway leaves nothing behind. MySQL commits implicitly on DDL,
-     * so there the callback simply runs. A migration can opt out by setting
-     * `public bool $withinTransaction = false;`.
-     *
-     * @param string $connection
-     * @param Migration $migration
-     * @param \Closure $callback
-     * @return void
      */
     protected function transactional(string $connection, Migration $migration, \Closure $callback): void
     {
@@ -486,20 +432,15 @@ class Migrator
 
     /**
      * Hold a database-wide lock so two deploys cannot migrate at the same time.
-     * MySQL and PostgreSQL use their advisory locks; SQLite has a single writer
-     * already and is not locked.
      *
-     * @param string $connection
-     * @param \Closure $callback
-     * @return mixed
-     * @throws \RuntimeException When another process holds the lock
+     * @throws \RuntimeException
      */
     protected function withLock(string $connection, \Closure $callback): mixed
     {
         $db = DB::connection($connection);
         $driver = $db->getDriver();
 
-        $key = 'doppar_migrations_' . md5($connection . '|' . config("database.connections.{$connection}.database"));
+        $key = 'doppar_migrations_' . md5($connection . '|' . (string) config("database.connections.{$connection}.database"));
         $number = crc32($key);
 
         $acquired = match ($driver) {
@@ -526,9 +467,8 @@ class Migrator
     }
 
     /**
-     * Map migration name to file path for the given connection
+     * Map migration name to file path for the given connection.
      *
-     * @param string $connection
      * @return array<string, string>
      */
     protected function migrationFiles(string $connection): array
@@ -543,10 +483,7 @@ class Migrator
     }
 
     /**
-     * Locate the file of a migration: the project's copy wins over a package's
-     *
-     * @param string $file
-     * @return string|null
+     * Locate the file of a migration: the project's copy wins over a package's.
      */
     protected function pathFor(string $file): ?string
     {
@@ -566,10 +503,7 @@ class Migrator
     }
 
     /**
-     * Fingerprint of a migration file, insensitive to line-ending differences
-     *
-     * @param string|null $path
-     * @return string|null
+     * Fingerprint of a migration file, insensitive to line-ending differences.
      */
     protected function checksum(?string $path): ?string
     {
@@ -581,12 +515,8 @@ class Migrator
     }
 
     /**
-     * Resolve a migration file into a Migration instance
+     * Resolve a migration file into a Migration instance.
      *
-     * @param string $file
-     * @param string|null $connection
-     * @param bool $forRollback
-     * @return Migration
      * @throws \RuntimeException
      */
     protected function resolveMigration(string $file, ?string $connection = null, bool $forRollback = false): Migration
@@ -621,10 +551,7 @@ class Migrator
     }
 
     /**
-     * Convert a migration file name to a class name
-     *
-     * @param string $file
-     * @return string
+     * Convert a migration file name to a class name.
      */
     protected function getMigrationClass(string $file): string
     {

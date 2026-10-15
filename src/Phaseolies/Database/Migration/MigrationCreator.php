@@ -2,10 +2,12 @@
 
 namespace Phaseolies\Database\Migration;
 
+use RuntimeException;
+
 class MigrationCreator
 {
     /**
-     * @var string Path to the stub templates
+     * Path to the stub templates.
      */
     protected string $stubPath;
 
@@ -19,12 +21,6 @@ class MigrationCreator
 
     /**
      * Create a new migration file.
-     *
-     * @param string $name
-     * @param string $path
-     * @param string|null $table
-     * @param bool $create
-     * @return string
      */
     public function create(string $name, string $path, ?string $table = null, bool $create = false): string
     {
@@ -43,9 +39,6 @@ class MigrationCreator
 
     /**
      * Ensure the migration directory exists. If not, create it.
-     *
-     * @param string $path
-     * @return void
      */
     protected function ensureMigrationDirectoryExists(string $path): void
     {
@@ -56,9 +49,6 @@ class MigrationCreator
 
     /**
      * Generate a timestamped migration file name.
-     *
-     * @param string $name
-     * @return string
      */
     protected function getMigrationName(string $name): string
     {
@@ -68,30 +58,27 @@ class MigrationCreator
     /**
      * Get the appropriate stub content based on migration context.
      *
-     * @param string|null $table
-     * @param bool $create
-     * @return string
+     * @throws RuntimeException
      */
     protected function getStub(?string $table, bool $create): string
     {
-        if (is_null($table)) {
-            return file_get_contents($this->stubPath . '/migration.stub');
+        $stubFile = match (true) {
+            $table === null => $this->stubPath . '/migration.stub',
+            $create         => $this->stubPath . '/migration.create.stub',
+            default         => $this->stubPath . '/migration.update.stub',
+        };
+
+        $content = @file_get_contents($stubFile);
+
+        if ($content === false) {
+            throw new RuntimeException("Migration stub not found: {$stubFile}");
         }
 
-        if ($create) {
-            return file_get_contents($this->stubPath . '/migration.create.stub');
-        }
-
-        return file_get_contents($this->stubPath . '/migration.update.stub');
+        return $content;
     }
 
     /**
      * Replace placeholders in the stub with actual values.
-     *
-     * @param string $name
-     * @param string $stub
-     * @param string|null $table
-     * @return void
      */
     protected function populateStub(string $name, string &$stub, ?string $table): void
     {
@@ -99,16 +86,14 @@ class MigrationCreator
 
         if ($table) {
             $className = $this->pascalCase(
-                preg_replace('/^\d+_/', '', $file) // Remove timestamp prefix
+                (string) preg_replace('/^\d+_/', '', $file)
             );
         } else {
             $className = $this->pascalCase($file);
         }
 
-        // Replace class name placeholders
         $stub = str_replace(['DummyClass', '{{ class }}', '{{class}}'], $className, $stub);
 
-        // Replace table name placeholders if table name is given
         if (!is_null($table)) {
             $stub = str_replace(['DummyTable', '{{ table }}', '{{table}}'], $table, $stub);
         }
@@ -116,9 +101,6 @@ class MigrationCreator
 
     /**
      * Convert a string to PascalCase.
-     *
-     * @param string $input
-     * @return string
      */
     protected function pascalCase(string $input): string
     {
@@ -127,9 +109,6 @@ class MigrationCreator
 
     /**
      * Convert a string to snake_case.
-     *
-     * @param string $input
-     * @return string
      */
     protected function snakeCase(string $input): string
     {

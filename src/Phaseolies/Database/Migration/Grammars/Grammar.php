@@ -10,7 +10,7 @@ abstract class Grammar
     /**
      * Column types that are auto-incrementing primary keys.
      *
-     * @var array
+     * @var array<int, string>
      */
     protected const INCREMENTING_TYPES = [
         'id',
@@ -23,17 +23,16 @@ abstract class Grammar
     ];
 
     /**
-     * Table level options (engine, charset, collation, comment, temporary)
+     * Table level options (engine, charset, collation, comment, temporary).
      *
-     * @var array
+     * @var array<string, mixed>
      */
     protected array $tableOptions = [];
 
     /**
      * Set the table level options used by the next CREATE TABLE statement.
      *
-     * @param array $options
-     * @return static
+     * @param array<string, mixed> $options
      */
     public function setTableOptions(array $options): static
     {
@@ -44,9 +43,6 @@ abstract class Grammar
 
     /**
      * Determine whether the given column type is an auto-incrementing key.
-     *
-     * @param string $type
-     * @return bool
      */
     public function isIncrementing(string $type): bool
     {
@@ -55,9 +51,6 @@ abstract class Grammar
 
     /**
      * Quote an identifier (table / column / index name).
-     *
-     * @param string $name
-     * @return string
      */
     public function quoteIdentifier(string $name): string
     {
@@ -67,8 +60,7 @@ abstract class Grammar
     /**
      * Quote a list of identifiers and join them with commas.
      *
-     * @param array $names
-     * @return string
+     * @param array<int, string> $names
      */
     public function quoteColumns(array $names): string
     {
@@ -77,9 +69,6 @@ abstract class Grammar
 
     /**
      * Quote a string literal.
-     *
-     * @param string $value
-     * @return string
      */
     public function quoteString(string $value): string
     {
@@ -88,16 +77,8 @@ abstract class Grammar
 
     /**
      * Build the default name of an index for the given table and columns.
-     * The scheme matches the one used for single-column indexes
-     * (idx_{table}_{column}, {table}_{column}_unique) so that
-     * dropIndex(['col']) always resolves to the index that index(['col'])
-     * created. Names longer than the 63 byte identifier limit are shortened
-     * with a stable hash.
      *
-     * @param string $table
-     * @param array $columns
-     * @param string $type
-     * @return string
+     * @param array<int, string> $columns
      */
     public function indexName(string $table, array $columns, string $type = 'index'): string
     {
@@ -108,7 +89,7 @@ abstract class Grammar
             default => $base . '_' . $type,
         };
 
-        $name = preg_replace('/[^A-Za-z0-9_]/', '_', $name);
+        $name = (string) preg_replace('/[^A-Za-z0-9_]/', '_', $name);
 
         if (strlen($name) > 63) {
             $name = substr($name, 0, 54) . '_' . substr(md5($name), 0, 8);
@@ -119,16 +100,13 @@ abstract class Grammar
 
     /**
      * Get the SQL appended to a column type (collation, generated column).
-     *
-     * @param ColumnDefinition $column
-     * @return string
      */
     public function compileTypeSuffix(ColumnDefinition $column): string
     {
         $sql = '';
         $attributes = $column->attributes;
 
-        if (!empty($attributes['collation'])) {
+        if (!empty($attributes['collation']) && is_string($attributes['collation'])) {
             $sql .= ' COLLATE ' . $this->formatCollation($attributes['collation']);
         }
 
@@ -144,9 +122,6 @@ abstract class Grammar
 
     /**
      * Get driver specific modifiers appended after the DEFAULT clause.
-     *
-     * @param ColumnDefinition $column
-     * @return string
      */
     public function compileColumnModifiers(ColumnDefinition $column): string
     {
@@ -155,9 +130,6 @@ abstract class Grammar
 
     /**
      * Whether PRIMARY KEY is declared inline in the column definition.
-     * Only SQLite needs this; the other grammars emit a table level clause.
-     *
-     * @return bool
      */
     public function shouldAddPrimaryInColumnDefinition(): bool
     {
@@ -166,8 +138,6 @@ abstract class Grammar
 
     /**
      * Whether foreign keys can be added to an existing table.
-     *
-     * @return bool
      */
     public function supportsAddingForeignKey(): bool
     {
@@ -177,13 +147,15 @@ abstract class Grammar
     /**
      * Append table level constraints to a compiled CREATE TABLE statement.
      *
-     * @param string $createSql
-     * @param array $constraints
-     * @return string
+     * @param array<int, string> $constraints
      */
     public function appendTableConstraints(string $createSql, array $constraints): string
     {
         $position = strrpos($createSql, ')');
+
+        if ($position === false) {
+            return $createSql;
+        }
 
         return substr($createSql, 0, $position) . ', ' . implode(', ', $constraints) . substr($createSql, $position);
     }
@@ -191,8 +163,7 @@ abstract class Grammar
     /**
      * Compile statements that must follow CREATE TABLE (table comment, ...).
      *
-     * @param string $table
-     * @return array
+     * @return array<int, string>
      */
     public function compileTableOptionStatements(string $table): array
     {
@@ -203,9 +174,7 @@ abstract class Grammar
      * Compile statements that attach a comment to a column when the driver
      * does not support inline comments.
      *
-     * @param string $table
-     * @param ColumnDefinition $column
-     * @return array
+     * @return array<int, string>
      */
     public function compileColumnComment(string $table, ColumnDefinition $column): array
     {
@@ -214,8 +183,6 @@ abstract class Grammar
 
     /**
      * Compile a statement that creates a table (used to add TEMPORARY).
-     *
-     * @return string
      */
     protected function createTableKeyword(): string
     {
@@ -223,11 +190,10 @@ abstract class Grammar
     }
 
     /**
-     * Compile DROP COLUMN statements (one per column, SQLite has no multi-drop).
+     * Compile DROP COLUMN statements.
      *
-     * @param string $table
-     * @param array $columns
-     * @return array
+     * @param array<int, string> $columns
+     * @return array<int, string>
      */
     public function compileDropColumn(string $table, array $columns): array
     {
@@ -239,11 +205,6 @@ abstract class Grammar
 
     /**
      * Compile a RENAME COLUMN statement.
-     *
-     * @param string $table
-     * @param string $from
-     * @param string $to
-     * @return string
      */
     public function compileRenameColumn(string $table, string $from, string $to): string
     {
@@ -253,10 +214,6 @@ abstract class Grammar
 
     /**
      * Compile a RENAME TABLE statement.
-     *
-     * @param string $from
-     * @param string $to
-     * @return string
      */
     public function compileRenameTable(string $from, string $to): string
     {
@@ -265,10 +222,6 @@ abstract class Grammar
 
     /**
      * Compile a DROP TABLE statement.
-     *
-     * @param string $table
-     * @param bool $ifExists
-     * @return string
      */
     public function compileDropTable(string $table, bool $ifExists = false): string
     {
@@ -277,10 +230,6 @@ abstract class Grammar
 
     /**
      * Compile a table level index (index, unique, fulltext, spatial).
-     *
-     * @param string $table
-     * @param IndexDefinition $index
-     * @return string
      */
     public function compileIndex(string $table, IndexDefinition $index): string
     {
@@ -298,11 +247,7 @@ abstract class Grammar
     /**
      * Compile CREATE INDEX for one or more columns.
      *
-     * @param string $table
-     * @param string $name
-     * @param array $columns
-     * @param string|null $algorithm
-     * @return string
+     * @param array<int, string> $columns
      */
     protected function compileCreateIndexSql(string $table, string $name, array $columns, ?string $algorithm = null): string
     {
@@ -314,10 +259,7 @@ abstract class Grammar
     /**
      * Compile a UNIQUE constraint for one or more columns.
      *
-     * @param string $table
-     * @param string $name
-     * @param array $columns
-     * @return string
+     * @param array<int, string> $columns
      */
     protected function compileCreateUniqueSql(string $table, string $name, array $columns): string
     {
@@ -328,10 +270,7 @@ abstract class Grammar
     /**
      * Compile a full text index.
      *
-     * @param string $table
-     * @param string $name
-     * @param array $columns
-     * @return string
+     * @param array<int, string> $columns
      */
     protected function compileFullTextIndex(string $table, string $name, array $columns): string
     {
@@ -341,10 +280,7 @@ abstract class Grammar
     /**
      * Compile a spatial index.
      *
-     * @param string $table
-     * @param string $name
-     * @param array $columns
-     * @return string
+     * @param array<int, string> $columns
      */
     protected function compileSpatialIndex(string $table, string $name, array $columns): string
     {
@@ -353,11 +289,6 @@ abstract class Grammar
 
     /**
      * Compile a statement that drops an index of the given type.
-     *
-     * @param string $table
-     * @param string $name
-     * @param string $type index|unique|fulltext|spatial|primary|foreign
-     * @return string
      */
     public function compileDropIndex(string $table, string $name, string $type = 'index'): string
     {
@@ -371,10 +302,6 @@ abstract class Grammar
 
     /**
      * Compile a DROP UNIQUE statement.
-     *
-     * @param string $table
-     * @param string $name
-     * @return string
      */
     protected function compileDropUnique(string $table, string $name): string
     {
@@ -383,9 +310,6 @@ abstract class Grammar
 
     /**
      * Compile a DROP PRIMARY KEY statement.
-     *
-     * @param string $table
-     * @return string
      */
     protected function compileDropPrimary(string $table): string
     {
@@ -394,10 +318,6 @@ abstract class Grammar
 
     /**
      * Compile a DROP FOREIGN KEY statement.
-     *
-     * @param string $table
-     * @param string $name
-     * @return string
      */
     protected function compileDropForeign(string $table, string $name): string
     {
@@ -407,9 +327,7 @@ abstract class Grammar
     /**
      * Compile an ADD PRIMARY KEY statement.
      *
-     * @param string $table
-     * @param array $columns
-     * @return string
+     * @param array<int, string> $columns
      */
     public function compileAddPrimary(string $table, array $columns): string
     {
@@ -418,11 +336,6 @@ abstract class Grammar
 
     /**
      * Compile a RENAME INDEX statement.
-     *
-     * @param string $table
-     * @param string $from
-     * @param string $to
-     * @return string
      */
     public function compileRenameIndex(string $table, string $from, string $to): string
     {
@@ -432,9 +345,7 @@ abstract class Grammar
     /**
      * Compile the statements that modify an existing column.
      *
-     * @param string $table
-     * @param ColumnDefinition $column
-     * @return array
+     * @return array<int, string>
      */
     public function compileChangeColumn(string $table, ColumnDefinition $column): array
     {
@@ -443,23 +354,16 @@ abstract class Grammar
 
     /**
      * SQL (with a single table-name binding) that lists the column names.
-     *
-     * @return string
      */
     abstract public function compileGetColumns(): string;
 
     /**
      * SQL (with a single table-name binding) that lists the index names.
-     *
-     * @return string
      */
     abstract public function compileGetIndexes(): string;
 
     /**
      * Format a collation name for use in COLLATE.
-     *
-     * @param string $collation
-     * @return string
      */
     protected function formatCollation(string $collation): string
     {
@@ -467,11 +371,8 @@ abstract class Grammar
     }
 
     /**
-     * Allow only characters that are valid in keywords / charset names, to
-     * keep schema definitions from injecting SQL.
+     * Allow only characters that are valid in keywords / charset names.
      *
-     * @param string $value
-     * @return string
      * @throws \InvalidArgumentException
      */
     protected function safeKeyword(string $value): string
@@ -485,55 +386,34 @@ abstract class Grammar
 
     /**
      * Get the SQL type definition for a column.
-     *
-     * @param ColumnDefinition $column
-     * @return string
      */
     abstract public function getTypeDefinition(ColumnDefinition $column): string;
 
     /**
      * Get the SQL for creating a table.
      *
-     * @param string $table
-     * @param array $columns
-     * @param array $primaryKeys
-     * @return string
+     * @param array<int, ColumnDefinition> $columns
+     * @param array<int, string> $primaryKeys
      */
     abstract public function compileCreateTable(string $table, array $columns, array $primaryKeys = []): string;
 
     /**
      * Get the SQL for adding a column.
-     *
-     * @param string $table
-     * @param string $columnSql
-     * @return string
      */
     abstract public function compileAddColumn(string $table, string $columnSql): string;
 
     /**
      * Get the SQL for creating an index.
-     *
-     * @param string $table
-     * @param string $column
-     * @param string|null $name
-     * @return string
      */
     abstract public function compileCreateIndex(string $table, string $column, ?string $name = null): string;
 
     /**
      * Get the SQL for creating a unique constraint.
-     *
-     * @param string $table
-     * @param string $column
-     * @param string|null $name
-     * @return string
      */
     abstract public function compileCreateUnique(string $table, string $column, ?string $name = null): string;
 
     /**
      * Check if the grammar supports adding columns with AFTER.
-     *
-     * @return bool
      */
     public function supportsColumnOrdering(): bool
     {
@@ -542,8 +422,6 @@ abstract class Grammar
 
     /**
      * Check if the grammar supports adding primary key with ALTER TABLE.
-     *
-     * @return bool
      */
     public function supportsAddingPrimaryKey(): bool
     {
@@ -552,8 +430,6 @@ abstract class Grammar
 
     /**
      * Check if UNIQUE constraint should be added in column definition.
-     *
-     * @return bool
      */
     public function shouldAddUniqueInColumnDefinition(): bool
     {
@@ -563,8 +439,8 @@ abstract class Grammar
     /**
      * Extract and validate the allowed values for an enum/set column.
      *
-     * @param array $attributes
-     * @return array
+     * @param array<string, mixed> $attributes
+     * @return array<int, mixed>
      * @throws \InvalidArgumentException
      */
     protected function getEnumAllowedValues(array $attributes): array
@@ -575,18 +451,13 @@ abstract class Grammar
             throw new \InvalidArgumentException('Enum type requires an array of allowed values');
         }
 
-        return $values;
+        return array_values($values);
     }
 
     /**
-     * Build an inline CHECK constraint clause restricting a column to
-     * a fixed set of values, for drivers with no native ENUM type.
-     * Appended directly to the column's type definition, so it applies
-     * the same way in both CREATE TABLE and ALTER TABLE ADD COLUMN.
+     * Build an inline CHECK constraint clause restricting a column to a fixed set of values.
      *
-     * @param string $column
-     * @param array $values
-     * @return string
+     * @param array<int, mixed> $values
      */
     protected function compileEnumCheckClause(string $column, array $values): string
     {

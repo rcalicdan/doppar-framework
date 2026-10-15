@@ -7,19 +7,22 @@ class Seeder
     /**
      * Call the given seeder class(es).
      *
-     * @param array|string $seeders
-     * @return void
+     * @param array<int, class-string>|class-string $seeders
      */
-    protected function call($seeders): void
+    protected function call(array|string $seeders): void
     {
-        $seeders = is_array($seeders) ? $seeders : [$seeders];
+        $list = is_array($seeders) ? $seeders : [$seeders];
 
-        foreach ($seeders as $seeder) {
+        foreach ($list as $seeder) {
             if (!class_exists($seeder)) {
                 throw new \RuntimeException("Seeder class {$seeder} not found");
             }
 
             $instance = app($seeder);
+
+            if (!is_object($instance)) {
+                throw new \RuntimeException("Unable to instantiate seeder [{$seeder}]");
+            }
 
             if (method_exists($instance, 'run')) {
                 $instance->run();

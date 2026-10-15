@@ -11,16 +11,12 @@ use PDO;
 class Schema
 {
     /**
-     * The database connection name
-     *
-     * @var string|null
+     * The database connection name.
      */
     protected ?string $connection = null;
 
     /**
-     * Create a new Schema instance with a specific connection
-     *
-     * @param string|null $connection
+     * Create a new Schema instance with a specific connection.
      */
     public function __construct(?string $connection = null)
     {
@@ -28,10 +24,7 @@ class Schema
     }
 
     /**
-     * Create a new database table
-     *
-     * @param string $table
-     * @param callable $callback
+     * Create a new database table.
      */
     public function create(string $table, callable $callback): void
     {
@@ -43,10 +36,7 @@ class Schema
     }
 
     /**
-     * Modify an existing database table
-     *
-     * @param string $table
-     * @param callable $callback
+     * Modify an existing database table.
      */
     public function table(string $table, callable $callback): void
     {
@@ -58,11 +48,7 @@ class Schema
     }
 
     /**
-     * Execute the blueprint one statement at a time. Not every driver can run
-     * several statements in a single call (SQLite silently runs only the first).
-     *
-     * @param Blueprint $blueprint
-     * @return void
+     * Execute the blueprint one statement at a time.
      */
     protected function run(Blueprint $blueprint): void
     {
@@ -72,9 +58,7 @@ class Schema
     }
 
     /**
-     * Drop a table
-     *
-     * @param string $table
+     * Drop a table.
      */
     public function drop(string $table): void
     {
@@ -82,9 +66,7 @@ class Schema
     }
 
     /**
-     * Drop a table if it exists
-     *
-     * @param string $table
+     * Drop a table if it exists.
      */
     public function dropIfExists(string $table): void
     {
@@ -92,10 +74,7 @@ class Schema
     }
 
     /**
-     * Rename a table
-     *
-     * @param string $from
-     * @param string $to
+     * Rename a table.
      */
     public function rename(string $from, string $to): void
     {
@@ -103,10 +82,9 @@ class Schema
     }
 
     /**
-     * Drop the given columns from a table
+     * Drop the given columns from a table.
      *
-     * @param string $table
-     * @param string|array $columns
+     * @param string|array<int, string> $columns
      */
     public function dropColumns(string $table, string|array $columns): void
     {
@@ -114,11 +92,7 @@ class Schema
     }
 
     /**
-     * Rename a column
-     *
-     * @param string $table
-     * @param string $from
-     * @param string $to
+     * Rename a column.
      */
     public function renameColumn(string $table, string $from, string $to): void
     {
@@ -126,11 +100,7 @@ class Schema
     }
 
     /**
-     * Determine if a table has a column
-     *
-     * @param string $table
-     * @param string $column
-     * @return bool
+     * Determine if a table has a column.
      */
     public function hasColumn(string $table, string $column): bool
     {
@@ -138,11 +108,9 @@ class Schema
     }
 
     /**
-     * Determine if a table has all of the given columns
+     * Determine if a table has all of the given columns.
      *
-     * @param string $table
-     * @param array $columns
-     * @return bool
+     * @param array<int, string> $columns
      */
     public function hasColumns(string $table, array $columns): bool
     {
@@ -156,10 +124,9 @@ class Schema
     }
 
     /**
-     * Get the column names of a table
+     * Get the column names of a table.
      *
-     * @param string $table
-     * @return array
+     * @return array<int, string>
      */
     public function getColumnListing(string $table): array
     {
@@ -167,12 +134,9 @@ class Schema
     }
 
     /**
-     * Determine if a table has an index (or unique constraint) with the given
-     * name, or one that was created on exactly the given column list.
+     * Determine if a table has an index (or unique constraint).
      *
-     * @param string $table
-     * @param string|array $index
-     * @return bool
+     * @param string|array<int, string> $index
      */
     public function hasIndex(string $table, string|array $index): bool
     {
@@ -193,10 +157,7 @@ class Schema
     }
 
     /**
-     * Check if a table exists in the database
-     *
-     * @param string $table
-     * @return bool
+     * Check if a table exists in the database.
      */
     public function hasTable(string $table): bool
     {
@@ -204,9 +165,7 @@ class Schema
     }
 
     /**
-     * Disable foreign key constraints
-     *
-     * @return void
+     * Disable foreign key constraints.
      */
     public function disableForeignKeyConstraints(): void
     {
@@ -214,9 +173,7 @@ class Schema
     }
 
     /**
-     * Enable foreign key constraints
-     *
-     * @return void
+     * Enable foreign key constraints.
      */
     public function enableForeignKeyConstraints(): void
     {
@@ -224,9 +181,7 @@ class Schema
     }
 
     /**
-     * Get the grammar of the current connection
-     *
-     * @return Grammar
+     * Get the grammar of the current connection.
      */
     protected function grammar(): Grammar
     {
@@ -234,28 +189,26 @@ class Schema
     }
 
     /**
-     * Run an introspection query bound to a table name
+     * Run an introspection query bound to a table name.
      *
-     * @param string $sql
-     * @param string $table
-     * @return array
+     * @return array<int, string>
      */
     protected function fetchNames(string $sql, string $table): array
     {
         $statement = Database::getPdoInstance($this->connection)->prepare($sql);
         $statement->execute([$table]);
 
-        return $statement->fetchAll(PDO::FETCH_COLUMN);
+        /** @var array<int, string>|false $result */
+        $result = $statement->fetchAll(PDO::FETCH_COLUMN);
+
+        return $result ?: [];
     }
 
     /**
-     * Get a new Schema instance for the specified connection
-     *
-     * @param string|null $connection
-     * @return static
+     * Get a new Schema instance for the specified connection.
      */
     public static function connection(?string $connection): self
     {
-        return new static($connection);
+        return new self($connection);
     }
 }

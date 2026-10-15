@@ -7,23 +7,19 @@ use Phaseolies\Support\Facades\DB;
 class MigrationRepository
 {
     /**
-     * Name of the table used to store migration records
-     *
-     * @var string
+     * Name of the table used to store migration records.
      */
     protected string $table = 'migrations';
 
     /**
-     * Whether the optional audit columns exist, keyed by connection
+     * Whether the optional audit columns exist, keyed by connection.
      *
      * @var array<string, bool>
      */
     protected array $extended = [];
 
     /**
-     * Checks if the migrations table exists in the database
-     *
-     * @return bool True if table exists, false otherwise
+     * Checks if the migrations table exists in the database.
      */
     public function exists(?string $connection = null): bool
     {
@@ -31,10 +27,7 @@ class MigrationRepository
     }
 
     /**
-     * Creates the migrations table in the database
-     *
-     * @param string|null $connection
-     * @return void
+     * Creates the migrations table in the database.
      */
     public function create(?string $connection = null): void
     {
@@ -54,10 +47,7 @@ class MigrationRepository
     }
 
     /**
-     * Add the audit columns
-     *
-     * @param string|null $connection
-     * @return void
+     * Add the audit columns.
      */
     public function upgrade(?string $connection = null): void
     {
@@ -96,59 +86,60 @@ class MigrationRepository
     }
 
     /**
-     * Gets the list of migrations that have already been run
+     * Gets the list of migrations that have already been run.
      *
-     * @param string|null $connection
-     * @return array
+     * @return array<int, string>
      */
     public function getRan(?string $connection = null): array
     {
-        $connection = $connection ?? config('database.default');
+        $conn = $connection ?? (string) config('database.default');
 
-        if (!$this->exists($connection)) {
+        if (!$this->exists($conn)) {
             return [];
         }
 
-        $stmt = DB::connection($connection)->statement(
+        $stmt = DB::connection($conn)->statement(
             "SELECT migration FROM {$this->table} ORDER BY batch ASC, migration ASC"
         );
 
+        /** @var array<int, string>|false $results */
         $results = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
         return $results ?: [];
     }
 
     /**
-     * Get every recorded migration keyed by name, oldest first
+     * Get every recorded migration keyed by name, oldest first.
      *
-     * @param string|null $connection
      * @return array<string, array{migration: string, batch: int, checksum: ?string, execution_time: ?int, ran_at: ?string}>
      */
     public function getRecords(?string $connection = null): array
     {
-        $connection = $connection ?? config('database.default');
+        $conn = $connection ?? (string) config('database.default');
 
-        if (!$this->exists($connection)) {
+        if (!$this->exists($conn)) {
             return [];
         }
 
-        $columns = $this->hasAuditColumns($connection)
+        $columns = $this->hasAuditColumns($conn)
             ? 'migration, batch, checksum, execution_time, ran_at'
             : 'migration, batch';
 
-        $rows = DB::connection($connection)
+        /** @var array<int, array<string, mixed>> $rows */
+        $rows = DB::connection($conn)
             ->statement("SELECT {$columns} FROM {$this->table} ORDER BY batch ASC, migration ASC")
             ->fetchAll(\PDO::FETCH_ASSOC);
 
         $records = [];
 
         foreach ($rows as $row) {
-            $records[$row['migration']] = [
-                'migration' => $row['migration'],
+            $name = (string) $row['migration'];
+            $records[$name] = [
+                'migration' => $name,
                 'batch' => (int) $row['batch'],
-                'checksum' => $row['checksum'] ?? null,
+                'checksum' => isset($row['checksum']) ? (string) $row['checksum'] : null,
                 'execution_time' => isset($row['execution_time']) ? (int) $row['execution_time'] : null,
-                'ran_at' => $row['ran_at'] ?? null,
+                'ran_at' => isset($row['ran_at']) ? (string) $row['ran_at'] : null,
             ];
         }
 
@@ -158,9 +149,6 @@ class MigrationRepository
     /**
      * Get the migrations to roll back, newest first.
      *
-     * @param string|null $connection
-     * @param int|null $steps
-     * @param int|null $batch
      * @return array<int, string>
      */
     public function getRollbackCandidates(?string $connection = null, ?int $steps = null, ?int $batch = null): array
@@ -186,13 +174,7 @@ class MigrationRepository
     }
 
     /**
-     * Logs a migration file as having been run
-     *
-     * @param string $file
-     * @param string|null $connection
-     * @param int|null $batch
-     * @param string|null $checksum
-     * @param int|null $executionTime
+     * Logs a migration file as having been run.
      */
     public function log(
         string $file,
@@ -219,11 +201,7 @@ class MigrationRepository
     }
 
     /**
-     * Remove a migration record, as when it has been rolled back
-     *
-     * @param string $file
-     * @param string|null $connection
-     * @return void
+     * Remove a migration record, as when it has been rolled back.
      */
     public function delete(string $file, ?string $connection = null): void
     {
@@ -234,10 +212,7 @@ class MigrationRepository
     }
 
     /**
-     * Gets the next batch number for new migrations
-     *
-     * @param string|null $connection
-     * @return int
+     * Gets the next batch number for new migrations.
      */
     public function getNextBatchNumber(?string $connection = null): int
     {
@@ -245,10 +220,7 @@ class MigrationRepository
     }
 
     /**
-     * Gets the highest batch number in use, or 0 when nothing has run
-     *
-     * @param string|null $connection
-     * @return int
+     * Gets the highest batch number in use, or 0 when nothing has run.
      */
     public function getLastBatchNumber(?string $connection = null): int
     {
@@ -262,10 +234,7 @@ class MigrationRepository
     }
 
     /**
-     * Whether the checksum / execution time / run date columns are available
-     *
-     * @param string|null $connection
-     * @return bool
+     * Whether the checksum / execution time / run date columns are available.
      */
     protected function hasAuditColumns(?string $connection = null): bool
     {
@@ -281,10 +250,6 @@ class MigrationRepository
         return $this->extended[$key];
     }
 
-    /**
-     * @param string|null $connection
-     * @return string
-     */
     protected function key(?string $connection): string
     {
         return $connection ?? (string) config('database.default');
