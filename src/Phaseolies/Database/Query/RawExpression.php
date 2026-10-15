@@ -12,14 +12,14 @@ class RawExpression
     /**
      * The parameter bindings for the raw expression.
      *
-     * @var array<int|string, mixed>
+     * @var array<array-key, mixed>
      */
     protected array $bindings = [];
 
     /**
      * Create a new raw SQL expression instance.
      *
-     * @param array<int|string, mixed> $bindings
+     * @param array<array-key, mixed> $bindings
      */
     public function __construct(string $value, array $bindings = [])
     {
@@ -38,7 +38,7 @@ class RawExpression
     /**
      * Get the parameter bindings for the expression.
      *
-     * @return array<int|string, mixed>
+     * @return array<array-key, mixed>
      */
     public function getBindings(): array
     {

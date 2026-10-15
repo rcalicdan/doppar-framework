@@ -13,6 +13,13 @@ use PDOException;
 use PDO;
 use Phaseolies\Database\Entity\Query\Grammar;
 
+/**
+ * @property string $table
+ * @property \PDO $pdo
+ * @property array<int, mixed> $conditions
+ * @property array<int, mixed> $orderBy
+ * @phpstan-consistent-constructor
+ */
 class Database
 {
     use Grammar {
@@ -21,42 +28,40 @@ class Database
     }
 
     /**
-     * The active PDO connections
+     * The active PDO connections.
      *
-     * @var array
+     * @var array<string, PDO>
      */
-    protected static $connections = [];
+    protected static array $connections = [];
 
     /**
-     * The transaction level counters for each connection
+     * The transaction level counters for each connection.
      *
-     * @var array
+     * @var array<string, int>
      */
-    protected static $transactions = [];
+    protected static array $transactions = [];
 
     /**
-     * The driver instances for each connection
+     * The driver instances for each connection.
      *
      * @var array<string, \Phaseolies\Database\Contracts\Driver\DriverInterface>
      */
-    protected static $drivers = [];
+    protected static array $drivers = [];
 
     /**
-     * Statements captured while pretending, or null when running for real
+     * Statements captured while pretending, or null when running for real.
      *
-     * @var array<int, array{sql: string, bindings: array}>|null
+     * @var array<int, array{sql: string, bindings: array<array-key, mixed>}>|null
      */
     protected static ?array $pretendLog = null;
 
     /**
-     * The connection name for this instance
+     * The connection name for this instance.
      */
     protected ?string $connection;
 
     /**
-     * Create a new database manager instance
-     *
-     * @param string|null $connection
+     * Create a new database manager instance.
      */
     public function __construct(?string $connection = null)
     {
@@ -64,10 +69,7 @@ class Database
     }
 
     /**
-     * Get the SQL query to retrieve table column information
-     *
-     * @param string $tableName
-     * @return string
+     * Get the SQL query to retrieve table column information.
      */
     public function getTableColumnsSql(string $tableName): string
     {
@@ -75,10 +77,10 @@ class Database
     }
 
     /**
-     * Process the result to extract column names based on driver
+     * Process the result to extract column names based on driver.
      *
-     * @param array $result
-     * @return array
+     * @param array<int, array<string, mixed>> $result
+     * @return array<int, string>
      */
     public function processTableColumnsResult(array $result): array
     {
@@ -86,9 +88,7 @@ class Database
     }
 
     /**
-     * Get the driver name for the current connection
-     *
-     * @return string
+     * Get the driver name for the current connection.
      */
     public function getDriver(): string
     {
@@ -96,30 +96,25 @@ class Database
     }
 
     /**
-     * Get a PDO instance for the specified connection
+     * Get a PDO instance for the specified connection.
      *
-     * @param string|null $connection
-     * @return PDO
      * @throws \RuntimeException
      * @throws \PDOException
      */
     public static function getPdoInstance(?string $connection = null): PDO
     {
-        $connection = $connection ?: config('database.default');
+        $connection = $connection ?: (string) config('database.default');
 
         if (!isset(static::$connections[$connection])) {
             $config = config("database.connections.{$connection}");
 
-            if (empty($config)) {
+            if (empty($config) || !is_array($config)) {
                 throw new \RuntimeException("Database connection [{$connection}] not configured.");
             }
 
             try {
-                // Create and store the driver instance
                 $driver = ConnectionFactory::createDriver($config);
                 static::$drivers[$connection] = $driver;
-
-                // Create the connection using the driver
                 static::$connections[$connection] = $driver->connect($config);
             } catch (PDOException $e) {
                 throw new \PDOException(
@@ -140,9 +135,7 @@ class Database
     }
 
     /**
-     * Get the PDO instance for this connection
-     *
-     * @return PDO
+     * Get the PDO instance for this connection.
      */
     protected function getPdo(): PDO
     {
@@ -150,14 +143,11 @@ class Database
     }
 
     /**
-     * Get the driver instance for a connection
-     *
-     * @param string|null $connection
-     * @return \Phaseolies\Database\Contracts\Driver\DriverInterface
+     * Get the driver instance for a connection.
      */
-    protected static function getDriverInstance(?string $connection = null)
+    protected static function getDriverInstance(?string $connection = null): \Phaseolies\Database\Contracts\Driver\DriverInterface
     {
-        $connection = $connection ?: config('database.default');
+        $connection = $connection ?: (string) config('database.default');
 
         if (!isset(static::$drivers[$connection])) {
             static::getPdoInstance($connection);
@@ -167,15 +157,14 @@ class Database
     }
 
     /**
-     * Begin a transaction on the specified connection
+     * Begin a transaction on the specified connection.
      *
      * @throws PDOException
-     * @return void
      */
     public function beginTransaction(): void
     {
         $pdo = $this->getPdo();
-        $connection = $this->connection ?? config('database.default');
+        $connection = $this->connection ?? (string) config('database.default');
 
         if (!isset(static::$transactions[$connection])) {
             static::$transactions[$connection] = 0;
@@ -191,15 +180,14 @@ class Database
     }
 
     /**
-     * Commit a transaction on the specified connection
+     * Commit a transaction on the specified connection.
      *
-     * @return void
      * @throws PDOException
      */
     public function commit(): void
     {
         $pdo = $this->getPdo();
-        $connection = $this->connection ?? config('database.default');
+        $connection = $this->connection ?? (string) config('database.default');
 
         if (static::$transactions[$connection] === 1) {
             $pdo->commit();
@@ -209,15 +197,14 @@ class Database
     }
 
     /**
-     * Rollback a transaction on the specified connection
+     * Rollback a transaction on the specified connection.
      *
-     * @return void
      * @throws PDOException
      */
     public function rollBack(): void
     {
         $pdo = $this->getPdo();
-        $connection = $this->connection ?? config('database.default');
+        $connection = $this->connection ?? (string) config('database.default');
 
         if (static::$transactions[$connection] === 1) {
             $pdo->rollBack();
@@ -229,14 +216,11 @@ class Database
     }
 
     /**
-     * Execute a Closure within a transaction
+     * Execute a Closure within a transaction.
      *
-     * @param \Closure $callback
-     * @param int $attempts
-     * @return mixed
      * @throws \Throwable
      */
-    public function transaction(\Closure $callback, int $attempts = 1)
+    public function transaction(\Closure $callback, int $attempts = 1): mixed
     {
         for ($currentAttempt = 1; $currentAttempt <= $attempts; $currentAttempt++) {
             $this->beginTransaction();
@@ -253,26 +237,24 @@ class Database
                 }
             }
         }
+
+        return null;
     }
 
     /**
-     * Get the transaction level for a connection
-     *
-     * @param string|null $connection
-     * @return int
+     * Get the transaction level for a connection.
      */
     public static function transactionLevel(?string $connection = null): int
     {
-        $connection = $connection ?: config('database.default');
+        $connection = $connection ?: (string) config('database.default');
 
         return static::$transactions[$connection] ?? 0;
     }
 
     /**
-     * Get the column names for a given table
+     * Get the column names for a given table.
      *
-     * @param string|null $table
-     * @return array
+     * @return array<int, string>
      * @throws PDOException
      */
     public function getTableColumns(?string $table = null): array
@@ -284,7 +266,7 @@ class Database
         try {
             $sql = $this->getTableColumnsSql($table);
             $stmt = $this->getPdo()->query($sql);
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt !== false ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
             return $this->processTableColumnsResult($result);
         } catch (PDOException $e) {
@@ -293,23 +275,20 @@ class Database
     }
 
     /**
-     * Get the list of tables in the database
+     * Get the list of tables in the database.
      *
-     * @return array
+     * @return array<int, string>
      */
     public function getTables(): array
     {
         $sql = $this->getTablesSql();
         $stmt = $this->getPdo()->query($sql);
 
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $stmt !== false ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
     }
 
     /**
-     * Check if a table exists in the database
-     *
-     * @param string $table
-     * @return bool
+     * Check if a table exists in the database.
      */
     public function tableExists(string $table): bool
     {
@@ -323,10 +302,8 @@ class Database
     }
 
     /**
-     * Get table name from model instance
+     * Get table name from model instance.
      *
-     * @param Model $model
-     * @return string
      * @throws \InvalidArgumentException
      */
     public static function getTable(Model $model): string
@@ -335,9 +312,7 @@ class Database
     }
 
     /**
-     * Get the database connection
-     *
-     * @return PDO
+     * Get the database connection.
      */
     public static function getConnection(): PDO
     {
@@ -345,12 +320,10 @@ class Database
     }
 
     /**
-     * Execute a stored procedure with optional result flattening
+     * Execute a stored procedure with optional result flattening.
      *
-     * @param string $procedureName
-     * @param array $params
-     * @param array $outputParams
-     * @return ProcedureResult
+     * @param array<array-key, mixed> $params
+     * @param array<array-key, mixed> $outputParams
      * @throws PDOException
      */
     public function procedure(string $procedureName, array $params = [], array $outputParams = []): ProcedureResult
@@ -374,19 +347,20 @@ class Database
 
         $results = [];
         do {
-            $results[] = $stmt->fetchAll();
+            /** @var array<int, array<string, mixed>> $rows */
+            $rows = $stmt->fetchAll();
+            $results[] = $rows;
         } while ($stmt->nextRowset());
 
         return new ProcedureResult($results);
     }
 
     /**
-     * Execute a view and return results
+     * Execute a view and return results.
      *
-     * @param string $viewName
-     * @param array $where
-     * @param array $params
-     * @return array
+     * @param array<string, mixed> $where
+     * @param array<string, mixed> $params
+     * @return array<int, array<string, mixed>>
      * @throws PDOException
      */
     public static function view(string $viewName, array $where = [], array $params = []): array
@@ -406,15 +380,17 @@ class Database
         $stmt->setFetchMode(PDO::FETCH_ASSOC);
         $stmt->execute($params);
 
-        return $stmt->fetchAll();
+        /** @var array<int, array<string, mixed>> $rows */
+        $rows = $stmt->fetchAll();
+
+        return $rows;
     }
 
     /**
-     * Execute a raw SQL query and return results as a Collection
+     * Execute a raw SQL query and return results as a Collection.
      *
-     * @param string $sql
-     * @param array $params
-     * @return \Phaseolies\Support\Collection
+     * @param array<array-key, mixed> $params
+     * @return Collection<array-key, mixed>
      * @throws PDOException
      */
     public function query(string $sql, array $params = []): Collection
@@ -425,7 +401,7 @@ class Database
             $stmt->execute($params);
             $results = $stmt->fetchAll();
 
-            return new \Phaseolies\Support\Collection(
+            return new Collection(
                 'array',
                 count($results) > 1 ? $results : $results[0] ?? []
             );
@@ -435,11 +411,9 @@ class Database
     }
 
     /**
-     * Execute a raw SQL query
+     * Execute a raw SQL query.
      *
-     * @param string $sql
-     * @param array $params
-     * @return \PDOStatement
+     * @param array<array-key, mixed> $params
      * @throws \PDOException
      */
     public function statement(string $sql, array $params = []): \PDOStatement
@@ -452,10 +426,9 @@ class Database
     }
 
     /**
-     * Execute a raw SQL statement (INSERT, UPDATE, DELETE)
+     * Execute a raw SQL statement (INSERT, UPDATE, DELETE).
      *
-     * @param string $sql
-     * @param array $params
+     * @param array<array-key, mixed> $params
      * @return int Number of affected rows
      * @throws PDOException
      */
@@ -470,13 +443,12 @@ class Database
         $pdo = $this->getPdo();
         $driver = $this->getDriver();
 
-        // PostgreSQL
         if ($driver === 'pgsql') {
             $statements = array_filter(array_map('trim', explode(';', $sql)));
 
             $rowCount = 0;
             foreach ($statements as $stmt) {
-                if (!empty($stmt)) {
+                if (trim($stmt) !== '') {
                     $statement = $pdo->prepare($stmt);
                     $statement->execute($params);
                     $rowCount += $statement->rowCount();
@@ -485,7 +457,6 @@ class Database
             return $rowCount;
         }
 
-        // MySQL/SQLite
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
@@ -495,8 +466,7 @@ class Database
     /**
      * Run the callback without executing any write statements, instead capturing them for inspection.
      *
-     * @param \Closure $callback
-     * @return array<int, array{sql: string, bindings: array}>
+     * @return array<int, array{sql: string, bindings: array<array-key, mixed>}>
      */
     public static function pretend(\Closure $callback): array
     {
@@ -513,9 +483,7 @@ class Database
     }
 
     /**
-     * Determine if statements are currently being captured instead of run
-     *
-     * @return bool
+     * Determine if statements are currently being captured instead of run.
      */
     public static function isPretending(): bool
     {
@@ -523,9 +491,8 @@ class Database
     }
 
     /**
-     * Drop all tables in the database
+     * Drop all tables in the database.
      *
-     * @return int Number of dropped tables
      * @throws PDOException
      */
     public function dropAllTables(): int
@@ -536,9 +503,7 @@ class Database
     }
 
     /**
-     * Disable foreign key constraints
-     *
-     * @return void
+     * Disable foreign key constraints.
      */
     public function disableForeignKeyConstraints(): void
     {
@@ -548,9 +513,7 @@ class Database
     }
 
     /**
-     * Enable foreign key constraints
-     *
-     * @return void
+     * Enable foreign key constraints.
      */
     public function enableForeignKeyConstraints(): void
     {
@@ -560,11 +523,9 @@ class Database
     }
 
     /**
-     * Create a raw SQL expression
+     * Create a raw SQL expression.
      *
-     * @param string $expression
-     * @param array $bindings
-     * @return RawExpression
+     * @param array<array-key, mixed> $bindings
      */
     public function sql(string $expression, array $bindings = []): RawExpression
     {
@@ -572,10 +533,7 @@ class Database
     }
 
     /**
-     * Begin a fluent query against a database table
-     *
-     * @param string $table
-     * @return Builder
+     * Begin a fluent query against a database table.
      */
     public function table(string $table): Builder
     {
@@ -585,10 +543,7 @@ class Database
     }
 
     /**
-     * Get a connection instance for the specified connection name
-     *
-     * @param string|null $name
-     * @return self
+     * Get a connection instance for the specified connection name.
      */
     public function connection(?string $name = null): self
     {
@@ -596,10 +551,7 @@ class Database
     }
 
     /**
-     * Get the query builder instance
-     *
-     * @param string $table
-     * @return QueryBuilder
+     * Get the query builder instance.
      */
     public function bucket(string $table): QueryBuilder
     {
@@ -607,50 +559,30 @@ class Database
     }
 
     /**
-     * Disconnect from the database and clean up resources
-     *
-     * @param string|null $connection
-     * @return bool
+     * Disconnect from the database and clean up resources.
      */
     public function disconnect(?string $connection = null): bool
     {
-        $connection = $connection ?: config('database.default');
+        $connection = $connection ?: (string) config('database.default');
 
-        try {
-            if (isset(static::$connections[$connection])) {
-                static::$connections[$connection] = null;
-                unset(static::$connections[$connection]);
-            }
+        unset(static::$connections[$connection]);
+        unset(static::$drivers[$connection]);
 
-            if (isset(static::$drivers[$connection])) {
-                static::$drivers[$connection] = null;
-                unset(static::$drivers[$connection]);
-            }
-
-            if (isset(static::$transactions[$connection])) {
-                static::$transactions[$connection] = 0;
-            }
-
-            return true;
-        } catch (\Throwable $e) {
-            if (function_exists('error_log')) {
-                error("Failed to disconnect database connection [{$connection}]: " . $e->getMessage());
-            }
-
-            return false;
+        if (isset(static::$transactions[$connection])) {
+            static::$transactions[$connection] = 0;
         }
+
+        return true;
     }
 
     /**
-     * Reconnect to the database
+     * Reconnect to the database.
      *
-     * @param string|null $connection
-     * @return PDO
      * @throws \RuntimeException
      */
     public function reconnect(?string $connection = null): PDO
     {
-        $connection = $connection ?: config('database.default');
+        $connection = $connection ?: (string) config('database.default');
 
         $this->disconnect($connection);
 
@@ -658,14 +590,11 @@ class Database
     }
 
     /**
-     * Check if connection is alive
-     *
-     * @param string|null $connection
-     * @return bool
+     * Check if connection is alive.
      */
     public function isConnected(?string $connection = null): bool
     {
-        $connection = $connection ?: config('database.default');
+        $connection = $connection ?: (string) config('database.default');
 
         if (!isset(static::$connections[$connection])) {
             return false;
@@ -680,17 +609,16 @@ class Database
     }
 
     /**
-     * Get a fresh database connection (new instance)
+     * Get a fresh database connection (new instance).
      *
-     * @param string|null $connection
-     * @return PDO
+     * @throws \RuntimeException
      */
     public function getFreshConnection(?string $connection = null): PDO
     {
-        $connection = $connection ?: config('database.default');
+        $connection = $connection ?: (string) config('database.default');
         $config = config("database.connections.{$connection}");
 
-        if (empty($config)) {
+        if (empty($config) || !is_array($config)) {
             throw new \RuntimeException("Database connection [{$connection}] not configured.");
         }
 
@@ -700,9 +628,7 @@ class Database
     }
 
     /**
-     * Clean up all database connections
-     *
-     * @return void
+     * Clean up all database connections.
      */
     public function cleanupAllConnections(): void
     {
@@ -710,7 +636,6 @@ class Database
             $this->disconnect($connection);
         }
 
-        // Clear all arrays
         static::$connections = [];
         static::$drivers = [];
         static::$transactions = [];

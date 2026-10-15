@@ -15,12 +15,6 @@ class WatchesHandler
 
     /**
      * Register a watch entry for a specific model property.
-     *
-     * @param string $modelClass
-     * @param string $property
-     * @param string $watcher 
-     * @param string|null $when
-     * @return void
      */
     public static function register(
         string $modelClass,
@@ -36,11 +30,9 @@ class WatchesHandler
     }
 
     /**
-     * Fire all registered watches for every dirty attribute on the given model
+     * Fire all registered watches for every dirty attribute on the given model.
      *
-     * @param Model $model
-     * @param array $dirty
-     * @return void
+     * @param array<string, mixed> $dirty
      */
     public static function fireForDirty(Model $model, array $dirty): void
     {
@@ -73,9 +65,6 @@ class WatchesHandler
 
     /**
      * Clear the registry for one or all model classes (useful in tests).
-     *
-     * @param string|null $modelClass
-     * @return void
      */
     public static function flush(?string $modelClass = null): void
     {
@@ -88,12 +77,6 @@ class WatchesHandler
 
     /**
      * Evaluate the optional condition attached to a watch entry.
-     *
-     * @param string|null $when
-     * @param mixed $old
-     * @param mixed $new
-     * @param Model $model
-     * @return bool
      */
     protected static function conditionPasses(?string $when, mixed $old, mixed $new, Model $model): bool
     {
@@ -101,7 +84,6 @@ class WatchesHandler
             return true;
         }
 
-        // Class-based condition (implements WatchConditionInterface)
         if (class_exists($when)) {
             $condition = app($when);
 
@@ -112,18 +94,9 @@ class WatchesHandler
                 );
             }
 
-            $result = $condition->evaluate($old, $new, $model);
-
-            if (!is_bool($result)) {
-                throw new \RuntimeException(
-                    "WatchConditionInterface::evaluate() must return bool, got " . gettype($result)
-                );
-            }
-
-            return $result;
+            return $condition->evaluate($old, $new, $model);
         }
 
-        // Method-based condition (method on the model itself)
         if (!method_exists($model, $when)) {
             throw new \RuntimeException(
                 "Watch condition method '{$when}' does not exist on " . get_class($model)
@@ -143,12 +116,6 @@ class WatchesHandler
 
     /**
      * Resolve and invoke the watcher's handle() method.
-     *
-     * @param string $watcherClass
-     * @param mixed $old
-     * @param mixed $new
-     * @param Model $model
-     * @return void
      */
     protected static function callListener(
         string $watcherClass,
@@ -158,22 +125,20 @@ class WatchesHandler
     ): void {
         $watcher = app($watcherClass);
 
-        if (!method_exists($watcher, 'handle')) {
-            throw new \RuntimeException(
-                "Watch watcher '{$watcherClass}' must expose a handle(mixed \$old, mixed \$new, Model \$model): void method."
-            );
+        if (is_object($watcher) && method_exists($watcher, 'handle')) {
+            $watcher->handle($old, $new, $model);
+            return;
         }
 
-        $watcher->handle($old, $new, $model);
+        throw new \RuntimeException(
+            "Watch watcher '{$watcherClass}' must expose a handle(mixed \$old, mixed \$new, Model \$model): void method."
+        );
     }
 
     /**
      * Check whether an identical watch entry is already registered.
      *
-     * @param string $modelClass
-     * @param string $property
-     * @param array  $entry
-     * @return bool
+     * @param array{watcher: string, when: string|null} $entry
      */
     protected static function watchExists(string $modelClass, string $property, array $entry): bool
     {

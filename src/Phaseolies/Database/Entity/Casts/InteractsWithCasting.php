@@ -33,11 +33,10 @@ trait InteractsWithCasting
 
     /**
      * Ensure cast metadata is scanned for the current class.
-     *
-     * @return void
      */
     private function ensureCastsCached(): void
     {
+        /** @var class-string $class */
         $class = static::class;
 
         if (!array_key_exists($class, self::$castAttributeCache)) {
@@ -48,12 +47,12 @@ trait InteractsWithCasting
     /**
      * Scan a class for properties decorated with #[Cast].
      *
-     * @param string $class
+     * @param class-string $class
      * @return array<string, string>
      */
     private function scanCastAttributes(string $class): array
     {
-        $found      = [];
+        $found = [];
         $reflection = new \ReflectionClass($class);
 
         foreach ($reflection->getProperties() as $property) {
@@ -65,13 +64,14 @@ trait InteractsWithCasting
 
             if (in_array($property->getName(), self::RESERVED_CAST_PROPERTIES, true)) {
                 throw new \LogicException(sprintf(
-                    'Invalid cast declaration on %s::$%s. This is a reserved internal model property and cannot be used with cast attributes. Use a real model field name or the $casts array for your column instead.',
+                    'Invalid cast declaration on %s::$%s. This is a reserved internal model property and cannot be used with cast attributes.',
                     $class,
                     $property->getName()
                 ));
             }
 
-            $cast                        = $castAttributes[0]->newInstance();
+            /** @var Transform $cast */
+            $cast = $castAttributes[0]->newInstance();
             $found[$property->getName()] = $cast->type;
         }
 
@@ -80,10 +80,6 @@ trait InteractsWithCasting
 
     /**
      * Apply the get cast — converts a raw DB value to its PHP representation.
-     *
-     * @param string $key
-     * @param mixed  $value
-     * @return mixed
      */
     protected function castForGet(string $key, mixed $value): mixed
     {
@@ -95,11 +91,7 @@ trait InteractsWithCasting
     }
 
     /**
-     * Apply the set cast — converts a PHP value to a DB-compatible format
-     *
-     * @param string $key
-     * @param mixed  $value
-     * @return mixed
+     * Apply the set cast — converts a PHP value to a DB-compatible format.
      */
     protected function castForSet(string $key, mixed $value): mixed
     {
@@ -118,9 +110,6 @@ trait InteractsWithCasting
 
     /**
      * Determine if an attribute has a #[Cast] definition.
-     *
-     * @param string $key
-     * @return bool
      */
     public function hasCast(string $key): bool
     {
@@ -131,9 +120,6 @@ trait InteractsWithCasting
 
     /**
      * Get the cast type for a given attribute.
-     *
-     * @param string $key
-     * @return string|null
      */
     public function getCastType(string $key): ?string
     {
@@ -155,9 +141,9 @@ trait InteractsWithCasting
     }
 
     /**
-     * Get all model attributes with casts applied
+     * Get all model attributes with casts applied.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function getCastAttributes(): array
     {
@@ -176,9 +162,6 @@ trait InteractsWithCasting
 
     /**
      * Reset the #[Cast] attribute scan cache.
-     *
-     * @param string|null $class
-     * @return void
      */
     public static function resetCastCache(?string $class = null): void
     {

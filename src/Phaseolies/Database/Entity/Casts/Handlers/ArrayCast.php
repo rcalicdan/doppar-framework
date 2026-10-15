@@ -9,10 +9,10 @@ class ArrayCast implements CastableInterface
     /**
      * Get the value as an array.
      *
-     * @param mixed $value
-     * @return array
+     * @return array<array-key, mixed>
      */
-    public function get(mixed $value): mixed
+    #[\Override]
+    public function get(mixed $value): array
     {
         if (is_array($value)) {
             return $value;
@@ -20,18 +20,16 @@ class ArrayCast implements CastableInterface
 
         if (is_string($value) && $value !== '') {
             $decoded = json_decode($value, true);
-            return json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+            return json_last_error() === JSON_ERROR_NONE && is_array($decoded) ? $decoded : [];
         }
 
         return [];
     }
 
     /**
-     * Set the value as a JSON string
-     *
-     * @param mixed $value
-     * @return mixed
+     * Set the value as a JSON string.
      */
+    #[\Override]
     public function set(mixed $value): mixed
     {
         if (is_string($value)) {

@@ -15,11 +15,10 @@ trait InteractsWithWatches
 
     /**
      * Scan #[Watches] attributes on the model's properties and register them with WatchesHandler.
-     *
-     * @return void
      */
     protected function registerWatchesAttributes(): void
     {
+        /** @var class-string $class */
         $class = static::class;
 
         if (!array_key_exists($class, self::$watchesAttributeCache)) {
@@ -39,8 +38,7 @@ trait InteractsWithWatches
     /**
      * Fire all registered property watches for the given set of dirty attributes.
      *
-     * @param array $dirty
-     * @return void
+     * @param array<string, mixed> $dirty
      */
     public function firePropertyWatches(array $dirty): void
     {
@@ -52,10 +50,7 @@ trait InteractsWithWatches
     }
 
     /**
-     * Reset the #[Watches] reflection cache for one or all model classes
-     *
-     * @param string|null $class
-     * @return void
+     * Reset the #[Watches] reflection cache for one or all model classes.
      */
     public static function resetWatchesCache(?string $class = null): void
     {
@@ -67,9 +62,9 @@ trait InteractsWithWatches
     }
 
     /**
-     * Use reflection to collect all #[Watches] metadata from the model's properties
+     * Use reflection to collect all #[Watches] metadata from the model's properties.
      *
-     * @param  string $class
+     * @param class-string $class
      * @return list<array{property: string, watcher: string, when: string|null}>
      */
     private static function scanWatchesAttributes(string $class): array

@@ -9,17 +9,16 @@ trait InteractsWithComputedProperties
     /**
      * Per-class cache of method names decorated with #[Computed].
      *
-     * @var array<string, list<string>>
+     * @var array<string, list<array{method: string, key: string}>>
      */
     private static array $computedAttributeCache = [];
 
     /**
      * Ensure computed method names are scanned and cached for this class.
-     *
-     * @return void
      */
     private function ensureComputedCached(): void
     {
+        /** @var class-string $class */
         $class = static::class;
 
         if (!array_key_exists($class, self::$computedAttributeCache)) {
@@ -28,9 +27,9 @@ trait InteractsWithComputedProperties
     }
 
     /**
-     * Scan the class for public methods decorated with #[Computed]
+     * Scan the class for public methods decorated with #[Computed].
      *
-     * @param string $class
+     * @param class-string $class
      * @return list<array{method: string, key: string}>
      */
     private static function scanComputedAttributes(string $class): array
@@ -52,16 +51,13 @@ trait InteractsWithComputedProperties
     }
 
     /**
-     * Determine whether the given name maps to a #[Computed] method
-     *
-     * @param string $name
-     * @return bool
+     * Determine whether the given name maps to a #[Computed] method.
      */
     public function isComputed(string $name): bool
     {
         $this->ensureComputedCached();
 
-        $entries = self::$computedAttributeCache[static::class];
+        $entries = self::$computedAttributeCache[static::class] ?? [];
 
         if (empty($entries)) {
             return false;
@@ -77,16 +73,15 @@ trait InteractsWithComputedProperties
     }
 
     /**
-     * Call the computed method that corresponds to the given name
-     *
-     * @param string $name
-     * @return mixed
+     * Call the computed method that corresponds to the given name.
      */
     public function resolveComputed(string $name): mixed
     {
         $this->ensureComputedCached();
 
-        foreach (self::$computedAttributeCache[static::class] as $entry) {
+        $entries = self::$computedAttributeCache[static::class] ?? [];
+
+        foreach ($entries as $entry) {
             if ($entry['key'] === $name || $entry['method'] === $name) {
                 return $this->{$entry['method']}();
             }
@@ -105,8 +100,9 @@ trait InteractsWithComputedProperties
         $this->ensureComputedCached();
 
         $result = [];
+        $entries = self::$computedAttributeCache[static::class] ?? [];
 
-        foreach (self::$computedAttributeCache[static::class] as $entry) {
+        foreach ($entries as $entry) {
             if (!in_array($entry['key'], $this->unexposable, true) &&
                 !in_array($entry['method'], $this->unexposable, true)) {
                 $result[$entry['key']] = $this->{$entry['method']}();
@@ -118,9 +114,6 @@ trait InteractsWithComputedProperties
 
     /**
      * Reset the #[Computed] scan cache for one or all model classes.
-     *
-     * @param string|null $class
-     * @return void
      */
     public static function resetComputedCache(?string $class = null): void
     {

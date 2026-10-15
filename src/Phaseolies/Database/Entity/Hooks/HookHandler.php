@@ -9,32 +9,14 @@ class HookHandler
     /**
      * Registry of all model hooks organized by model class and event name.
      *
-     * Structure:
-     * [
-     *     'App\Models\User' => [
-     *         'before_updated' => [
-     *             [
-     *                 'handler' => callable|string, // The hook action to execute
-     *                 'when'    => bool|callable    // Condition to determine execution
-     *             ],
-     *             ...more hooks for this event
-     *         ],
-     *         'after_deleted' => [
-     *              ...hooks for this event
-     *         ],
-     *     ],
-     *      ...other model classes
-     * ]
-     *
-     * @var array<string, array<string, array<int, array{handler: callable|string, when: bool|callable}>>>
+     * @var array<string, array<string, list<array{handler: callable|string, when: bool|callable}>>>
      */
-    public static $hooks = [];
+    public static array $hooks = [];
 
     /**
-     * Register hooks for a model
+     * Register hooks for a model.
      *
-     * @param string $modelClass
-     * @param array $hooks
+     * @param array<string, mixed> $hooks
      */
     public static function register(string $modelClass, array $hooks): void
     {
@@ -47,12 +29,9 @@ class HookHandler
     }
 
     /**
-     * Check hook exists or not
+     * Check hook exists or not.
      *
-     * @param string $modelClass
-     * @param string $event
-     * @param array $newHook
-     * @return bool
+     * @param array{handler: callable|string, when: bool|callable} $newHook
      */
     protected static function hookExists(string $modelClass, string $event, array $newHook): bool
     {
@@ -70,11 +49,10 @@ class HookHandler
     }
 
     /**
-     * Determines if two hook configurations are identical
+     * Determines if two hook configurations are identical.
      *
-     * @param array $hook1
-     * @param array $hook2
-     * @return bool
+     * @param array{handler: callable|string, when: bool|callable} $hook1
+     * @param array{handler: callable|string, when: bool|callable} $hook2
      */
     protected static function hooksEqual(array $hook1, array $hook2): bool
     {
@@ -82,7 +60,6 @@ class HookHandler
             return false;
         }
 
-        // Compare callable conditions
         if (is_callable($hook1['when']) && is_callable($hook2['when'])) {
             return $hook1['when'] == $hook2['when'];
         }
@@ -91,12 +68,11 @@ class HookHandler
     }
 
     /**
-     * Normalize handler configuration
+     * Normalize handler configuration.
      *
-     * @param mixed $handler
-     * @return array
+     * @return array{handler: callable|string, when: bool|callable}
      */
-    protected static function normalizeHandler($handler): array
+    protected static function normalizeHandler(mixed $handler): array
     {
         if (is_callable($handler)) {
             return [
@@ -114,7 +90,7 @@ class HookHandler
 
         if (is_array($handler)) {
             return [
-                'handler' => $handler['handler'] ?? null,
+                'handler' => $handler['handler'] ?? '',
                 'when' => $handler['when'] ?? true
             ];
         }
@@ -123,19 +99,13 @@ class HookHandler
     }
 
     /**
-     * Execute hooks for a given event
-     *
-     * @param string $event
-     * @param Model $model
-     * @return void
+     * Execute hooks for a given event.
      */
     public static function execute(string $event, Model $model): void
     {
         $modelClass = get_class($model);
         $hooks = self::$hooks[$modelClass][$event] ?? [];
 
-        // Only set original attributes for before hooks
-        // If they're not already set
         if (str_starts_with($event, 'before_')) {
             if (empty($model->getOriginalAttributes())) {
                 $model->setOriginalAttributes($model->getAttributes());
@@ -143,7 +113,7 @@ class HookHandler
         }
 
         foreach ($hooks as $hook) {
-            if (!self::shouldExecute($model, $hook['when'] ?? true)) {
+            if (!self::shouldExecute($model, $hook['when'])) {
                 continue;
             }
 
@@ -152,11 +122,7 @@ class HookHandler
     }
 
     /**
-     * Check if a hook should be executed
-     *
-     * @param Model $model
-     * @param callable|bool $condition
-     * @return bool
+     * Check if a hook should be executed.
      */
     protected static function shouldExecute(Model $model, callable|bool $condition = true): bool
     {
@@ -176,13 +142,9 @@ class HookHandler
     }
 
     /**
-     * Execute a single handler
-     *
-     * @param callable|string $handler
-     * @param Model $model
-     * @return void
+     * Execute a single handler.
      */
-    protected static function executeHandler($handler, Model $model): void
+    protected static function executeHandler(callable|string $handler, Model $model): void
     {
         if (is_callable($handler)) {
             $handler($model);
@@ -191,7 +153,7 @@ class HookHandler
 
         if (is_string($handler)) {
             $instance = app($handler);
-            if (method_exists($instance, 'handle')) {
+            if (is_object($instance) && method_exists($instance, 'handle')) {
                 $instance->handle($model);
                 return;
             }
@@ -201,11 +163,7 @@ class HookHandler
     }
 
     /**
-     * Check if a hook should be executed
-     *
-     * @param Model $model
-     * @param callable|bool $condition
-     * @return bool
+     * Check if a hook should be executed for unit testing.
      */
     public static function shouldExecuteForUnitTest(Model $model, callable|bool $condition = true): bool
     {
