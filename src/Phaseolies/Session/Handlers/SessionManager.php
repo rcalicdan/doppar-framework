@@ -8,8 +8,6 @@ class SessionManager
 {
     /**
      * A static property to hold the session handler instance
-     *
-     * @var SessionHandlerInterface|null|null
      */
     private static ?SessionHandlerInterface $handler = null;
 
@@ -50,8 +48,7 @@ class SessionManager
 
     /**
      * Returns the currently initialized session handler.
-     *
-     * @return SessionHandlerInterface
+     * 
      * @throws \RuntimeException
      */
     public static function getHandler(): SessionHandlerInterface

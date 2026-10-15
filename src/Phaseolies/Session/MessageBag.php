@@ -6,20 +6,14 @@ class MessageBag
 {
     /**
      * Set a value in the session.
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return void
      */
-    public static function set(string $key, $value): void
+    public static function set(string $key, mixed $value): void
     {
         session()->put($key, $value);
     }
 
     /**
      * Stores the provided input data in the session for later retrieval.
-     *
-     * @return void
      */
     public static function flashInput(): void
     {
@@ -36,9 +30,6 @@ class MessageBag
 
     /**
      * Retrieves the old input data that was previously stored in the session..
-     *
-     * @param string|null $key
-     * @return string|null
      */
     public static function old(?string $key = null): ?string
     {
@@ -47,27 +38,24 @@ class MessageBag
         if ($key) {
             $data = session('input');
             session()->forget('input');
-            return $data[$key] ?? null;
+            return is_array($data) ? ($data[$key] ?? null) : null;
         }
 
-        return $input;
+        return is_string($input) ? $input : null;
     }
 
     /**
      * Checks if old input data exists for a specific key.
-     *
-     * @param string $key
-     * @return bool
      */
     public static function has(string $key): bool
     {
-        return isset(session('input')[$key]);
+        $input = session('input');
+
+        return is_array($input) && isset($input[$key]);
     }
 
     /**
      * Clears all old input data from the session.
-     *
-     * @return void
      */
     public static function clear(): void
     {
@@ -79,17 +67,19 @@ class MessageBag
     /**
      * Gets all old input data from the session.
      *
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     public static function all(): ?array
     {
-        return session('input') ?? null;
+        $input = session('input');
+
+        return is_array($input) ? $input : null;
     }
 
     /**
-     * Get the excluded sensitive input fields from being stored in the session
+     * Get the excluded sensitive input fields from being stored in the session.
      *
-     * @return array
+     * @return array<int, string>
      */
     public static function getSensitiveInputFields(): array
     {
@@ -97,6 +87,8 @@ class MessageBag
             return [];
         }
 
-        return config('app.exclude_sensitive_input');
+        $fields = config('app.exclude_sensitive_input');
+
+        return is_array($fields) ? $fields : [];
     }
 }

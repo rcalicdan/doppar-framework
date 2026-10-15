@@ -2,21 +2,19 @@
 
 namespace Phaseolies\Session\Contracts;
 
-use Phaseolies\Session\Contracts\SessionHandlerInterface;
-
 abstract class AbstractSessionHandler implements SessionHandlerInterface
 {
     /**
      * Configuration options for the session handler.
      *
-     * @var array
+     * @var array<string, mixed>
      */
     protected array $config;
 
     /**
      * Constructor - initializes the session handler with configuration.
      *
-     * @param array $config
+     * @param array<string, mixed> $config
      */
     public function __construct(array $config)
     {
@@ -25,8 +23,6 @@ abstract class AbstractSessionHandler implements SessionHandlerInterface
 
     /**
      * Generates a CSRF token and stores it in the session if not already present.
-     *
-     * @return void
      */
     public function generateToken(): void
     {
@@ -39,8 +35,6 @@ abstract class AbstractSessionHandler implements SessionHandlerInterface
 
     /**
      * Regenerates the session ID to prevent session fixation attacks.
-     *
-     * @return void
      */
     public function regenerate(): void
     {
@@ -51,12 +45,12 @@ abstract class AbstractSessionHandler implements SessionHandlerInterface
 
     /**
      * Determines if the session should be regenerated based on the configured lifetime.
-     *
-     * @return bool
      */
     protected function shouldRegenerate(): bool
     {
+        $lifetime = (int) ($this->config['lifetime'] ?? 120);
+
         return !session()->has('last_regenerated') ||
-            (time() - session('last_regenerated')) > ($this->config['lifetime'] * 60);
+            (time() - (int) session('last_regenerated')) > ($lifetime * 60);
     }
 }
