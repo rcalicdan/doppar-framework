@@ -2,30 +2,23 @@
 
 namespace Phaseolies\Support\Storage;
 
-use Phaseolies\Support\Storage\IFileSystem;
-use Phaseolies\Support\Storage\FileSystem;
 use Phaseolies\Support\File;
 
 class PublicFileSystem extends FileSystem implements IFileSystem
 {
     /**
-     * Store file as user defined path
-     *
-     * @param string $path
-     * @param File $file
-     * @param string|null $fileName
-     * @return bool
+     * Store file as user defined path.
      */
+    #[\Override]
     public function store(string $path, File $file, ?string $fileName = null): bool
     {
         return $this->put($this->isDirectoryExists($path), $file, $fileName);
     }
 
     /**
-     * return project base path in os
-     *
-     * @return string
+     * Return project base path in OS.
      */
+    #[\Override]
     public function storeageBasePath(): string
     {
         return $this->filePath;
@@ -33,10 +26,8 @@ class PublicFileSystem extends FileSystem implements IFileSystem
 
     /**
      * Get the contents of a file.
-     *
-     * @param string $path
-     * @return string|null
      */
+    #[\Override]
     public function get(string $path): ?string
     {
         $fullPath = $this->resolvePath($path);
@@ -51,12 +42,10 @@ class PublicFileSystem extends FileSystem implements IFileSystem
     /**
      * Get the contents of a file.
      *
-     * @param  string  $path
-     * @return string
-     *
-     * @throws \Phaseolies\Support\Storage\FileNotFoundException
+     * @throws FileNotFoundException
      */
-    public function content($path)
+    #[\Override]
+    public function content(string $path): string
     {
         $fullPath = $this->resolvePath($path);
 
@@ -75,9 +64,9 @@ class PublicFileSystem extends FileSystem implements IFileSystem
     /**
      * Delete one or more files.
      *
-     * @param string|array $path
-     * @return bool
+     * @param string|array<int, string> $path
      */
+    #[\Override]
     public function delete(string|array $path): bool
     {
         $success = true;

@@ -7,16 +7,12 @@ use Phaseolies\Support\File;
 class FileSystem
 {
     /**
-     * Full File path directory without filename
-     *
-     * @var string
+     * Full File path directory without filename.
      */
     protected string $filePath;
 
     /**
-     * Custom FileName
-     *
-     * @var string
+     * Custom FileName.
      */
     protected string $fileName;
 
@@ -28,15 +24,19 @@ class FileSystem
 
     /**
      * Resolve a caller-supplied relative path against the storage root,
-     * rejecting any path that would escape outside the root
+     * rejecting any path that would escape outside the root.
      *
-     * @param string $relativePath
-     * @return string
      * @throws \InvalidArgumentException
      */
     protected function resolvePath(string $relativePath): string
     {
-        foreach (preg_split('#[/\\\\]#', $relativePath) as $segment) {
+        $segments = preg_split('#[/\\\\]#', $relativePath);
+
+        if ($segments === false) {
+            throw new \InvalidArgumentException("Invalid path \"{$relativePath}\".");
+        }
+
+        foreach ($segments as $segment) {
             if ($segment === '..' || $segment === '.') {
                 throw new \InvalidArgumentException(
                     "Invalid path \"{$relativePath}\": path traversal is not allowed."
@@ -67,12 +67,7 @@ class FileSystem
     }
 
     /**
-     * move file in local file system
-     *
-     * @param string $path
-     * @param File $file
-     * @param string|null $fileName
-     * @return bool
+     * Move file in local file system.
      */
     public function put(string $path, File $file, ?string $fileName = null): bool
     {
@@ -88,38 +83,34 @@ class FileSystem
     }
 
     /**
-     * Undocumented function
-     *
-     * @param File $file
-     * @return string
+     * Get the file name for storage.
      */
     public function getFileName(File $file): string
     {
-        if (is_null($this->fileName) || empty($this->fileName)) {
+        if ($this->fileName === '') {
             return $file->getClientOriginalName();
         }
 
-        $fileType = explode('/', $file->getClientOriginalType())[1];
+        $fileType = explode('/', $file->getClientOriginalType())[1] ?? '';
 
         return $this->fileName . '.' . $fileType;
     }
 
     /**
-     * Writes data from a stream to a file at the specified path
+     * Writes data from a stream to a file at the specified path.
      *
-     * @param string $path
-     * @param string $name
      * @param resource $stream
-     * @return bool
      */
     public function writeStream(string $path, string $name, $stream): bool
     {
         $realPath = $this->destinationFile($path, $name);
 
-        // Open the output file in write-binary mode
         $outputStream = fopen($realPath, 'wb');
 
-        // Determine the chunk size based on the stream size
+        if ($outputStream === false) {
+            throw new \RuntimeException("Unable to open file for writing: {$realPath}");
+        }
+
         $streamSize = $this->getStreamSize($stream);
 
         // Use 5 MB chunks for files > 50 MB, otherwise 4 KB
@@ -127,6 +118,9 @@ class FileSystem
 
         while (!feof($stream)) {
             $buffer = fread($stream, $chunkSize);
+            if ($buffer === false) {
+                break;
+            }
             fwrite($outputStream, $buffer);
         }
 
@@ -140,20 +134,16 @@ class FileSystem
      * Retrieves the size of a given stream.
      *
      * @param resource $stream
-     * @return int
      */
-    private function getStreamSize($stream)
+    private function getStreamSize($stream): int
     {
         $stat = fstat($stream);
 
-        return $stat['size'];
+        return $stat !== false ? (int) $stat['size'] : 0;
     }
 
     /**
-     * Path is already exist or not
-     *
-     * @param string $path
-     * @return string
+     * Path is already exist or not.
      */
     public function isDirectoryExists(string $path): string
     {
@@ -167,9 +157,6 @@ class FileSystem
 
     /**
      * Determine if the given path is a directory.
-     *
-     * @param string $directory
-     * @return bool
      */
     public function isDirectory(string $directory): bool
     {
@@ -177,21 +164,15 @@ class FileSystem
     }
 
     /**
-     * create the destination full path according in os
-     *
-     * @param string $path
-     * @param string $fileName
-     * @return string
+     * Create the destination full path according in OS.
      */
-    public function destinationFile(string $path, $fileName): string
+    public function destinationFile(string $path, string $fileName): string
     {
         return $this->resolvePath($path . '/' . $fileName);
     }
 
     /**
-     * return project base path in os
-     *
-     * @return string
+     * Return project base path in OS.
      */
     public function storeageBasePath(): string
     {
@@ -200,25 +181,16 @@ class FileSystem
 
     /**
      * Determine if the given path is a file.
-     *
-     * @param string $file
-     * @return bool
      */
-    public function isFile($file)
+    public function isFile(string $file): bool
     {
         return is_file($file);
     }
 
     /**
      * Create a directory.
-     *
-     * @param string $path
-     * @param int $mode
-     * @param bool $recursive
-     * @param bool $force
-     * @return bool
      */
-    public function makeDirectory(string $path, $mode = 0755, bool $recursive = false, bool $force = false): bool
+    public function makeDirectory(string $path, int $mode = 0755, bool $recursive = false, bool $force = false): bool
     {
         if ($force) {
             return @mkdir($path, $mode, $recursive);
