@@ -8,8 +8,6 @@ use Symfony\Contracts\Cache\ItemInterface;
 class TaggedCache
 {
     /**
-     * @param CacheStore $store
-     * @param TagAwareAdapter $pool
      * @param array<int, string> $tags
      */
     public function __construct(
@@ -24,12 +22,8 @@ class TaggedCache
 
     /**
      * Get a tagged item.
-     *
-     * @param mixed $key
-     * @param mixed $default
-     * @return mixed
      */
-    public function get($key, $default = null): mixed
+    public function get(string $key, mixed $default = null): mixed
     {
         $item = $this->pool->getItem($this->store->validatedKey($key));
 
@@ -38,13 +32,8 @@ class TaggedCache
 
     /**
      * Store an item with this cache's tags.
-     *
-     * @param mixed $key
-     * @param mixed $value
-     * @param null|int|\DateInterval $ttl
-     * @return bool
      */
-    public function set($key, $value, $ttl = null): bool
+    public function set(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool
     {
         $item = $this->pool->getItem($this->store->validatedKey($key));
         $item->set($value)->tag($this->tags);
@@ -60,12 +49,8 @@ class TaggedCache
 
     /**
      * Store an item with this cache's tags until it is flushed.
-     *
-     * @param mixed $key
-     * @param mixed $value
-     * @return bool
      */
-    public function forever($key, $value): bool
+    public function forever(string $key, mixed $value): bool
     {
         $item = $this->pool->getItem($this->store->validatedKey($key));
         $item->set($value)->tag($this->tags)->expiresAfter(null);
@@ -75,45 +60,32 @@ class TaggedCache
 
     /**
      * Determine whether a tagged item exists.
-     *
-     * @param mixed $key
-     * @return bool
      */
-    public function has($key): bool
+    public function has(string $key): bool
     {
         return $this->pool->hasItem($this->store->validatedKey($key));
     }
 
     /**
      * Remove one tagged item.
-     *
-     * @param mixed $key
-     * @return bool
      */
-    public function delete($key): bool
+    public function delete(string $key): bool
     {
         return $this->pool->deleteItem($this->store->validatedKey($key));
     }
 
     /**
      * Remove one tagged item.
-     *
-     * @param mixed $key
-     * @return bool
      */
-    public function forget($key): bool
+    public function forget(string $key): bool
     {
         return $this->delete($key);
     }
 
     /**
      * Get a tagged item and remove it in one step.
-     *
-     * @param mixed $key
-     * @param mixed $default
-     * @return mixed
      */
-    public function pull($key, $default = null): mixed
+    public function pull(string $key, mixed $default = null): mixed
     {
         $key = $this->store->validatedKey($key);
         $item = $this->pool->getItem($key);
@@ -130,23 +102,14 @@ class TaggedCache
 
     /**
      * Get a tagged item, or run the callback and store its result with these tags.
-     *
-     * @param string $key
-     * @param int|\DateInterval|null $ttl
-     * @param \Closure $callback
-     * @return mixed
      */
-    public function stash(string $key, $ttl, \Closure $callback): mixed
+    public function stash(string $key, null|int|\DateInterval $ttl, \Closure $callback): mixed
     {
         return $this->remember($key, $this->store->ttlSeconds($ttl), $callback);
     }
 
     /**
      * Get a tagged item, or run the callback and store its result until it is flushed.
-     *
-     * @param string $key
-     * @param \Closure $callback
-     * @return mixed
      */
     public function stashForever(string $key, \Closure $callback): mixed
     {
@@ -155,8 +118,6 @@ class TaggedCache
 
     /**
      * Remove every item that has any of this cache's tags.
-     *
-     * @return bool
      */
     public function flush(): bool
     {
@@ -173,12 +134,6 @@ class TaggedCache
         return $this->tags;
     }
 
-    /**
-     * @param string $key
-     * @param int|null $seconds
-     * @param \Closure $callback
-     * @return mixed
-     */
     protected function remember(string $key, ?int $seconds, \Closure $callback): mixed
     {
         return $this->pool->get(

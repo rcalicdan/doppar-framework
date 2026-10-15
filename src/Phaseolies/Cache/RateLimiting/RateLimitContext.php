@@ -6,11 +6,6 @@ class RateLimitContext
 {
     /**
      * Create a new rate limit context instance.
-     *
-     * @param string $key
-     * @param int $maxAttempts
-     * @param int $decaySeconds
-     * @return void
      */
     public function __construct(
         public readonly string $key,

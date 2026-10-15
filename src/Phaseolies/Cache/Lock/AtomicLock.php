@@ -8,55 +8,32 @@ class AtomicLock
 {
     /**
      * The cache store implementation.
-     *
-     * @var CacheStore
      */
-    protected $store;
+    protected CacheStore $store;
 
     /**
      * The name of the lock.
-     *
-     * @var string
      */
-    protected $name;
+    protected string $name;
 
     /**
      * The number of seconds the lock should be maintained.
-     *
-     * @var int
      */
-    protected $seconds;
+    protected int $seconds;
 
     /**
      * The owner identifier of the lock.
-     *
-     * @var string
      */
-    protected $owner;
+    protected string $owner;
 
-    /**
-     * @var bool
-     */
-    private $shouldRelease = true;
+    private bool $shouldRelease = true;
 
-    /**
-     * @var bool
-     */
-    private $isOwned = false;
+    private bool $isOwned = false;
 
-    /**
-     * @var bool
-     */
-    private $isRestored = false;
+    private bool $isRestored = false;
 
     /**
      * Create a new lock instance.
-     *
-     * @param CacheStore $store
-     * @param string $name
-     * @param int $seconds
-     * @param string|null $owner
-     * @return void
      */
     public function __construct(CacheStore $store, string $name, int $seconds, ?string $owner = null, bool $isRestored = false)
     {
@@ -78,8 +55,6 @@ class AtomicLock
 
     /**
      * Attempt to acquire the lock.
-     *
-     * @return bool
      */
     public function get(): bool
     {
@@ -118,8 +93,6 @@ class AtomicLock
 
     /**
      * Release the lock.
-     *
-     * @return bool
      */
     public function release(): bool
     {
@@ -130,7 +103,7 @@ class AtomicLock
         try {
             $lockData = $this->store->get($this->name);
 
-            if (!$lockData) {
+            if (!$lockData || !is_string($lockData)) {
                 $this->isOwned = false;
                 return false;
             }
@@ -157,15 +130,13 @@ class AtomicLock
 
     /**
      * Check and release stale lock.
-     *
-     * @return void
      */
     private function checkAndReleaseStaleLock(): void
     {
         try {
             $lockData = $this->store->get($this->name);
 
-            if (!$lockData) {
+            if (!$lockData || !is_string($lockData)) {
                 return;
             }
 
@@ -177,7 +148,7 @@ class AtomicLock
                 return;
             }
 
-            $expiresAt = $data['expires_at'];
+            $expiresAt = (int) $data['expires_at'];
             $currentTime = time();
 
             // Add small grace period
@@ -202,9 +173,6 @@ class AtomicLock
 
     /**
      * Attempt to acquire the lock for the given number of seconds.
-     *
-     * @param int $seconds
-     * @return bool
      */
     public function block(int $seconds): bool
     {
@@ -234,8 +202,6 @@ class AtomicLock
 
     /**
      * Prevent the lock from being automatically released.
-     *
-     * @return $this
      */
     public function preventRelease(): self
     {
@@ -246,8 +212,6 @@ class AtomicLock
 
     /**
      * Allow the lock to be automatically released.
-     *
-     * @return $this
      */
     public function allowRelease(): self
     {
@@ -258,15 +222,13 @@ class AtomicLock
 
     /**
      * Returns the current owner of the lock.
-     *
-     * @return string
      */
     public function owner(): string
     {
         try {
             $lockData = $this->store->get($this->name);
 
-            if ($lockData) {
+            if ($lockData && is_string($lockData)) {
                 $data = json_decode($lockData, true);
                 return is_array($data) ? ($data['owner'] ?? '') : '';
             }
@@ -279,8 +241,6 @@ class AtomicLock
 
     /**
      * Determines whether this lock is owned by the current process.
-     *
-     * @return bool
      */
     public function isOwnedByCurrentProcess(): bool
     {
@@ -289,18 +249,16 @@ class AtomicLock
 
     /**
      * Get the remaining time until lock expiration.
-     *
-     * @return int|null
      */
     public function getRemainingTime(): ?int
     {
         try {
             $lockData = $this->store->get($this->name);
 
-            if ($lockData) {
+            if ($lockData && is_string($lockData)) {
                 $data = json_decode($lockData, true);
                 if (is_array($data) && isset($data['expires_at'])) {
-                    $remaining = $data['expires_at'] - time();
+                    $remaining = (int) $data['expires_at'] - time();
                     return max(0, $remaining);
                 }
             }
@@ -313,15 +271,13 @@ class AtomicLock
 
     /**
      * Validate that we still own a restored lock.
-     *
-     * @return bool
      */
     private function validateRestoredOwnership(): bool
     {
         try {
             $lockData = $this->store->get($this->name);
 
-            if (!$lockData) {
+            if (!$lockData || !is_string($lockData)) {
                 return false;
             }
 
@@ -331,7 +287,7 @@ class AtomicLock
             }
 
             // Check if lock is expired
-            $expiresAt = $data['expires_at'] ?? 0;
+            $expiresAt = (int) ($data['expires_at'] ?? 0);
             if (time() > $expiresAt) {
                 return false;
             }
@@ -344,8 +300,6 @@ class AtomicLock
 
     /**
      * Generate a random owner identifier.
-     *
-     * @return string
      */
     protected function generateOwner(): string
     {
@@ -354,8 +308,6 @@ class AtomicLock
 
     /**
      * Get the owner of the lock.
-     *
-     * @return string
      */
     public function getOwner(): string
     {
@@ -364,8 +316,6 @@ class AtomicLock
 
     /**
      * Get the name of the lock.
-     *
-     * @return string
      */
     public function getName(): string
     {
@@ -374,8 +324,6 @@ class AtomicLock
 
     /**
      * Get the seconds of the lock.
-     *
-     * @return int
      */
     public function getSeconds(): int
     {
@@ -384,8 +332,6 @@ class AtomicLock
 
     /**
      * Check if the lock is currently owned by this instance.
-     *
-     * @return bool
      */
     public function isOwned(): bool
     {
@@ -393,9 +339,7 @@ class AtomicLock
     }
 
     /**
-     * Manually set the lock as owned (for restoreLock functionality)
-     *
-     * @return $this
+     * Manually set the lock as owned (for restoreLock functionality).
      */
     public function setOwned(): self
     {
@@ -406,8 +350,6 @@ class AtomicLock
 
     /**
      * Check if this lock was restored.
-     *
-     * @return bool
      */
     public function isRestored(): bool
     {

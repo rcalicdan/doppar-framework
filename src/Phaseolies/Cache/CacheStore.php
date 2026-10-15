@@ -15,22 +15,16 @@ class CacheStore implements IncrementableCacheInterface
 {
     /**
      * The cache adapter instance.
-     *
-     * @var AdapterInterface
      */
     protected AdapterInterface $adapter;
 
     /**
-     * The cache prefix
-     *
-     * @var string
+     * The cache prefix.
      */
     protected string $prefix;
 
     /**
-     * Seconds an item lives when no ttl is given
-     *
-     * @var int|null
+     * Seconds an item lives when no ttl is given.
      */
     protected ?int $defaultTtl;
 
@@ -43,25 +37,16 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * The name this store was configured under, if known.
-     *
-     * @var string|null
      */
     protected ?string $name = null;
 
     /**
      * Pool that holds tagged items, created on first use.
-     *
-     * @var TagAwareAdapter|null
      */
     protected ?TagAwareAdapter $taggedPool = null;
 
     /**
      * Create a new cache store instance.
-     *
-     * @param AdapterInterface $adapter
-     * @param string|null $prefix
-     * @param int|null $defaultTtl
-     * @return void
      */
     public function __construct(AdapterInterface $adapter, ?string $prefix = null, ?int $defaultTtl = null)
     {
@@ -71,10 +56,7 @@ class CacheStore implements IncrementableCacheInterface
     }
 
     /**
-     * Set cache prefix
-     *
-     * @param string $key
-     * @return string
+     * Set cache prefix.
      */
     protected function prefixedKey(string $key): string
     {
@@ -83,11 +65,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Validate a cache key and return the prefixed adapter key.
-     *
-     * @param mixed $key
-     * @return string
      */
-    protected function prefixedValidatedKey($key): string
+    protected function prefixedValidatedKey(string $key): string
     {
         $key = $this->normalizeKey($key);
 
@@ -95,14 +74,10 @@ class CacheStore implements IncrementableCacheInterface
     }
 
     /**
-     * Get the cache data by key
-     *
-     * @param mixed $key
-     * @param null $default
-     * @return mixed
+     * Get the cache data by key.
      */
     #[\Override]
-    public function get($key, $default = null): mixed
+    public function get(string $key, mixed $default = null): mixed
     {
         $key = $this->prefixedValidatedKey($key);
         $item = $this->adapter->getItem($key);
@@ -112,14 +87,9 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Stores a value in the cache with a specified key.
-     *
-     * @param mixed $key
-     * @param mixed $value
-     * @param null $ttl
-     * @return bool
      */
     #[\Override]
-    public function set($key, $value, $ttl = null): bool
+    public function set(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool
     {
         $key = $this->prefixedValidatedKey($key);
 
@@ -137,12 +107,9 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Deletes a value from the cache by its key.
-     *
-     * @param mixed $key
-     * @return bool
      */
     #[\Override]
-    public function delete($key): bool
+    public function delete(string $key): bool
     {
         $key = $this->prefixedValidatedKey($key);
 
@@ -151,8 +118,6 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Clears all items from the cache.
-     *
-     * @return bool
      */
     #[\Override]
     public function clear(): bool
@@ -170,12 +135,11 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Retrieves multiple cache items by their keys.
      *
-     * @param iterable $keys
-     * @param mixed $default
-     * @return iterable
+     * @param iterable<string> $keys
+     * @return iterable<string, mixed>
      */
     #[\Override]
-    public function getMultiple($keys, $default = null): iterable
+    public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
         $keys = $this->normalizeKeyList($keys);
         $prefixedKeys = [];
@@ -202,12 +166,10 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Stores multiple cache items at once.
      *
-     * @param iterable $values
-     * @param null|int|\DateInterval $ttl
-     * @return bool
+     * @param iterable<string, mixed> $values
      */
     #[\Override]
-    public function setMultiple($values, $ttl = null): bool
+    public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
         $values = $this->normalizeValueMap($values);
 
@@ -232,11 +194,10 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Deletes multiple cache items by their keys.
      *
-     * @param iterable $keys
-     * @return bool
+     * @param iterable<string> $keys
      */
     #[\Override]
-    public function deleteMultiple($keys): bool
+    public function deleteMultiple(iterable $keys): bool
     {
         $keys = $this->normalizeKeyList($keys);
         $prefixedKeys = [];
@@ -250,12 +211,9 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Checks whether a cache item exists for the given key.
-     *
-     * @param mixed $key
-     * @return bool
      */
     #[\Override]
-    public function has($key): bool
+    public function has(string $key): bool
     {
         $key = $this->prefixedValidatedKey($key);
 
@@ -264,12 +222,9 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Increment the value of an item in the cache.
-     *
-     * @param string $key
-     * @param int $value
-     * @return int|bool
      */
-    public function increment($key, $value = 1): int|bool
+    #[\Override]
+    public function increment(string $key, int $value = 1): int|bool
     {
         $key = $this->prefixedValidatedKey($key);
 
@@ -290,12 +245,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Decrement the value of an item in the cache.
-     *
-     * @param string $key
-     * @param int $value
-     * @return int|bool
      */
-    public function decrement($key, $value = 1): int|bool
+    public function decrement(string $key, int $value = 1): int|bool
     {
         $key = $this->prefixedValidatedKey($key);
 
@@ -316,13 +267,9 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Store an item in the cache if the key doesn't exist.
-     *
-     * @param string $key
-     * @param mixed $value
-     * @param  null|int|\DateInterval  $ttl
-     * @return bool
      */
-    public function add($key, $value, $ttl = null): bool
+    #[\Override]
+    public function add(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool
     {
         $key = $this->prefixedValidatedKey($key);
         $seconds = $this->ttlFor($ttl);
@@ -361,12 +308,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Store an item in the cache indefinitely.
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return bool
      */
-    public function forever($key, $value): bool
+    public function forever(string $key, mixed $value): bool
     {
         $key = $this->prefixedValidatedKey($key);
 
@@ -379,11 +322,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Remove an item from the cache.
-     *
-     * @param string $key
-     * @return bool
      */
-    public function forget($key): bool
+    public function forget(string $key): bool
     {
         $key = $this->prefixedValidatedKey($key);
 
@@ -397,19 +337,10 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Validate a cache key.
      *
-     * @param string $key
-     * @return void
      * @throws \InvalidArgumentException
      */
-    protected function validateKey($key): void
+    protected function validateKey(string $key): void
     {
-        if (!is_string($key)) {
-            throw new \InvalidArgumentException(sprintf(
-                'Cache key must be string, "%s" given',
-                gettype($key)
-            ));
-        }
-
         if ($key === '') {
             throw new \InvalidArgumentException('Cache key must not be empty');
         }
@@ -425,10 +356,10 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Validate an array of cache keys.
      *
-     * @param iterable $keys
-     * @return array
+     * @param iterable<string> $keys
+     * @return array<int, string>
      */
-    protected function validateKeys($keys): array
+    protected function validateKeys(iterable $keys): array
     {
         $validated = [];
         foreach ($keys as $key) {
@@ -441,31 +372,22 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * The ttl an item is saved with: the given one, or the store default.
-     *
-     * @param null|int|\DateInterval $ttl
-     * @return int|null
      */
-    protected function ttlFor($ttl): ?int
+    protected function ttlFor(null|int|\DateInterval $ttl): ?int
     {
         return $this->convertTtlToSeconds($ttl) ?? $this->defaultTtl;
     }
 
     /**
      * The ttl an item is saved with, in seconds: the given one, or the store default.
-     *
-     * @param null|int|\DateInterval $ttl
-     * @return int|null
      */
-    public function ttlSeconds($ttl): ?int
+    public function ttlSeconds(null|int|\DateInterval $ttl): ?int
     {
         return $this->ttlFor($ttl);
     }
 
     /**
      * Save an item with the expiry it already had.
-     *
-     * @param CacheItemInterface $item
-     * @return void
      */
     protected function keepExpiry(CacheItemInterface $item): void
     {
@@ -478,11 +400,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Convert TTL to seconds.
-     *
-     * @param null|int|\DateInterval $ttl
-     * @return int|null
      */
-    protected function convertTtlToSeconds($ttl): ?int
+    protected function convertTtlToSeconds(null|int|\DateInterval $ttl): ?int
     {
         if ($ttl === null) {
             return null;
@@ -497,11 +416,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Normalize an individual cache key.
-     *
-     * @param mixed $key
-     * @return string
      */
-    protected function normalizeKey($key): string
+    protected function normalizeKey(string $key): string
     {
         $this->validateKey($key);
 
@@ -511,17 +427,11 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Normalize an iterable of cache keys into a sequential array of strings.
      *
-     * @param mixed $keys
+     * @param iterable<string> $keys
      * @return array<int, string>
      */
-    protected function normalizeKeyList($keys): array
+    protected function normalizeKeyList(iterable $keys): array
     {
-        if ($keys instanceof \Traversable) {
-            $keys = iterator_to_array($keys, false);
-        } elseif (!is_array($keys)) {
-            throw new \InvalidArgumentException('Keys must be an array or traversable');
-        }
-
         $normalized = [];
 
         foreach ($keys as $key) {
@@ -534,21 +444,15 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Normalize an iterable of key/value pairs into an array.
      *
-     * @param mixed $values
+     * @param iterable<string, mixed> $values
      * @return array<string, mixed>
      */
-    protected function normalizeValueMap($values): array
+    protected function normalizeValueMap(iterable $values): array
     {
-        if ($values instanceof \Traversable) {
-            $values = iterator_to_array($values, true);
-        } elseif (!is_array($values)) {
-            throw new \InvalidArgumentException('Values must be an array or traversable');
-        }
-
         $normalized = [];
 
         foreach ($values as $key => $value) {
-            $normalized[$this->normalizeKey($key)] = $value;
+            $normalized[$this->normalizeKey((string) $key)] = $value;
         }
 
         return $normalized;
@@ -558,7 +462,6 @@ class CacheStore implements IncrementableCacheInterface
      * Execute a callback while holding a process-local lock for the key.
      *
      * @template T
-     * @param string $key
      * @param \Closure(): T $callback
      * @return T
      */
@@ -591,8 +494,6 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Resolve the directory used for process-local cache locks.
-     *
-     * @return string
      */
     protected function lockDirectory(): string
     {
@@ -609,9 +510,7 @@ class CacheStore implements IncrementableCacheInterface
     }
 
     /**
-     * Get the current adapter
-     *
-     * @return AdapterInterface
+     * Get the current adapter.
      */
     public function getAdapter(): AdapterInterface
     {
@@ -620,23 +519,14 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Get an item from the cache, or execute the callback and store the result.
-     *
-     * @param string $key
-     * @param int|\DateInterval|null $ttl
-     * @param \Closure $callback
-     * @return mixed
      */
-    public function stash(string $key, $ttl, \Closure $callback): mixed
+    public function stash(string $key, null|int|\DateInterval $ttl, \Closure $callback): mixed
     {
         return $this->remember($key, $this->ttlFor($ttl), $callback);
     }
 
     /**
      * Get an item from the cache, or execute the callback and store the result forever.
-     *
-     * @param string $key
-     * @param \Closure $callback
-     * @return mixed
      */
     public function stashForever(string $key, \Closure $callback): mixed
     {
@@ -645,14 +535,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Get an item from the cache, or execute the callback and store the result conditionally.
-     *
-     * @param string $key
-     * @param \Closure $callback
-     * @param bool $condition
-     * @param int|\DateInterval|null $ttl
-     * @return mixed
      */
-    public function stashWhen(string $key, \Closure $callback, bool $condition, $ttl = null): mixed
+    public function stashWhen(string $key, \Closure $callback, bool $condition, null|int|\DateInterval $ttl = null): mixed
     {
         if (!$condition) {
             return $callback();
@@ -663,12 +547,6 @@ class CacheStore implements IncrementableCacheInterface
             : $this->stash($key, $ttl, $callback);
     }
 
-    /**
-     * @param string $key
-     * @param int|null $seconds
-     * @param \Closure $callback
-     * @return mixed
-     */
     protected function remember(string $key, ?int $seconds, \Closure $callback): mixed
     {
         $key = $this->prefixedValidatedKey($key);
@@ -701,12 +579,8 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Get an item and remove it in one step.
-     *
-     * @param mixed $key
-     * @param mixed $default
-     * @return mixed
      */
-    public function pull($key, $default = null): mixed
+    public function pull(string $key, mixed $default = null): mixed
     {
         $key = $this->prefixedValidatedKey($key);
         $item = $this->adapter->getItem($key);
@@ -723,20 +597,15 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Determine whether an item is absent from the cache.
-     *
-     * @param mixed $key
-     * @return bool
      */
-    public function missing($key): bool
+    public function missing(string $key): bool
     {
         return !$this->has($key);
     }
 
     /**
-     * Use another store from the `caching.stores` config
+     * Use another store from the `caching.stores` config.
      *
-     * @param string|null $name
-     * @return self
      * @throws \RuntimeException When the store is not configured
      */
     public function store(?string $name = null): self
@@ -754,8 +623,6 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * The key prefix this store was created with.
-     *
-     * @return string
      */
     public function getPrefix(): string
     {
@@ -763,10 +630,7 @@ class CacheStore implements IncrementableCacheInterface
     }
 
     /**
-     * Take over the settings of another store
-     *
-     * @param CacheStore $store
-     * @return static
+     * Take over the settings of another store.
      */
     public function inheritSettingsFrom(CacheStore $store): static
     {
@@ -780,9 +644,7 @@ class CacheStore implements IncrementableCacheInterface
     /**
      * Teach this store how to find the others. Used by the cache launcher.
      *
-     * @param string $name
-     * @param \Closure $resolver fn(string $name): static
-     * @return static
+     * @param \Closure(string): static $resolver
      */
     public function resolveStoresUsing(string $name, \Closure $resolver): static
     {
@@ -793,10 +655,9 @@ class CacheStore implements IncrementableCacheInterface
     }
 
     /**
-     * Get a cache whose items carry tags, so a whole group can be removed at once
+     * Get a cache whose items carry tags, so a whole group can be removed at once.
      *
-     * @param string|array $names
-     * @return TaggedCache
+     * @param string|array<int, string> $names
      * @throws \RuntimeException
      */
     public function tags(string|array $names): TaggedCache
@@ -812,8 +673,6 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Get the tagged pool, creating it if necessary.
-     *
-     * @return TagAwareAdapter|null
      */
     protected function taggedPool(): ?TagAwareAdapter
     {
@@ -826,9 +685,6 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * The separate namespace tagged items are kept in, if the adapter can have one.
-     *
-     * @param object $adapter
-     * @return AdapterInterface|null
      */
     private function taggedNamespaceOf(object $adapter): ?AdapterInterface
     {
@@ -843,22 +699,14 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Validate a key and return it as the adapter will see it.
-     *
-     * @param mixed $key
-     * @return string
      */
-    public function validatedKey($key): string
+    public function validatedKey(string $key): string
     {
         return $this->normalizeKey($key);
     }
 
     /**
      * Get a lock instance.
-     *
-     * @param string $name
-     * @param int $seconds
-     * @param string|null $owner
-     * @return \Phaseolies\Cache\Lock\AtomicLock
      */
     public function locked(string $name, int $seconds = 10, ?string $owner = null): AtomicLock
     {
@@ -867,22 +715,18 @@ class CacheStore implements IncrementableCacheInterface
 
     /**
      * Restore a lock instance from the given owner.
-     *
-     * @param string $name
-     * @param string|null $owner
-     * @return \Phaseolies\Cache\Lock\AtomicLock
      */
     public function restoreLock(string $name, string $owner): AtomicLock
     {
         $lockData = $this->get($name);
         $seconds = 10;
 
-        if ($lockData) {
+        if ($lockData && is_string($lockData)) {
             $data = json_decode($lockData, true);
             if (is_array($data)) {
-                $seconds = $data['duration'] ?? 10;
+                $seconds = isset($data['duration']) ? (int) $data['duration'] : 10;
 
-                $cachedOwner = $data['owner'] ?? '';
+                $cachedOwner = isset($data['owner']) && is_string($data['owner']) ? $data['owner'] : '';
                 if ($cachedOwner !== $owner) {
                     throw new \RuntimeException("Lock owner mismatch. Expected: {$owner}, Found: {$cachedOwner}");
                 }

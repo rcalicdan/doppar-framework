@@ -2,23 +2,17 @@
 
 namespace Phaseolies\Cache;
 
-use Phaseolies\Cache\RateLimit;
 use Psr\SimpleCache\InvalidArgumentException;
 
 class RateLimiter
 {
     /**
      * The cache store implementation.
-     *
-     * @var IncrementableCacheInterface
      */
-    protected $cache;
+    protected IncrementableCacheInterface $cache;
 
     /**
      * Create a new rate limiter instance.
-     *
-     * @param IncrementableCacheInterface $cache
-     * @return void
      */
     public function __construct(IncrementableCacheInterface $cache)
     {
@@ -28,10 +22,6 @@ class RateLimiter
     /**
      * Determine if the given key has been "accessed" too many times.
      *
-     * @param string $key
-     * @param int $maxAttempts
-     * @param int $decaySeconds
-     * @return \Phaseolies\Cache\RateLimit
      * @throws InvalidArgumentException
      */
     public function attempt(string $key, int $maxAttempts, int $decaySeconds): RateLimit
@@ -47,7 +37,7 @@ class RateLimiter
             } else {
                 $hits = $this->cache->increment($key);
 
-                if ($hits === false) {
+                if (!is_int($hits)) {
                     $this->cache->set($key, 1, $decaySeconds);
                     $this->cache->set($timerKey, $resetAt, $decaySeconds);
                     $hits = 1;
@@ -55,12 +45,12 @@ class RateLimiter
             }
 
             $remaining = max(0, $maxAttempts - $hits);
-            $resetAt = $this->cache->get($timerKey);
+            $resetAt = (int) ($this->cache->get($timerKey) ?? ($now + $decaySeconds));
 
             return new RateLimit(
                 limit: $maxAttempts,
                 remaining: $remaining,
-                resetAt: $resetAt ?? $now + $decaySeconds,
+                resetAt: $resetAt,
             );
         } catch (InvalidArgumentException $e) {
             throw $e;
@@ -70,9 +60,6 @@ class RateLimiter
     /**
      * Determine if the given key has been "accessed" too many times.
      *
-     * @param string $key
-     * @param int $maxAttempts
-     * @return bool
      * @throws InvalidArgumentException
      */
     public function tooManyAttempts(string $key, int $maxAttempts): bool
@@ -87,8 +74,6 @@ class RateLimiter
     /**
      * Get the number of seconds until the "key" is accessible again.
      *
-     * @param string $key
-     * @return int
      * @throws InvalidArgumentException
      */
     public function availableIn(string $key): int
@@ -100,7 +85,7 @@ class RateLimiter
                 return 0;
             }
 
-            return max(0, $timer - time());
+            return max(0, (int) $timer - time());
         } catch (InvalidArgumentException $e) {
             return 0;
         }
@@ -108,9 +93,6 @@ class RateLimiter
 
     /**
      * Get the expiration timestamp for the rate limit.
-     *
-     * @param int $seconds
-     * @return int
      */
     public function availableAt(int $seconds): int
     {
@@ -120,9 +102,6 @@ class RateLimiter
     /**
      * Increment the counter for a given key for a given decay time.
      *
-     * @param string $key
-     * @param int $decaySeconds
-     * @return int
      * @throws InvalidArgumentException
      */
     public function hit(string $key, int $decaySeconds): int
@@ -139,7 +118,7 @@ class RateLimiter
 
             $hits = $this->cache->increment($key);
 
-            if ($hits === false) {
+            if (!is_int($hits)) {
                 $this->cache->set($key, 1, $decaySeconds);
                 $this->cache->set($timerKey, $resetAt, $decaySeconds);
                 return 1;
@@ -154,8 +133,6 @@ class RateLimiter
     /**
      * Clear the hits and lockout timer for the given key.
      *
-     * @param string $key
-     * @return void
      * @throws InvalidArgumentException
      */
     public function clear(string $key): void
@@ -171,8 +148,6 @@ class RateLimiter
     /**
      * Get the number of attempts for the given key.
      *
-     * @param string $key
-     * @return int
      * @throws InvalidArgumentException
      */
     public function attempts(string $key): int
@@ -187,8 +162,6 @@ class RateLimiter
     /**
      * Reset the number of attempts for the given key.
      *
-     * @param string $key
-     * @return void
      * @throws InvalidArgumentException
      */
     public function resetAttempts(string $key): void
